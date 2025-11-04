@@ -2,6 +2,8 @@
 
 A DPS meter for Blue Protocol built with Electron, React 19, and TypeScript. This project is a fork of [NeRooNx's BPSR Meter](https://github.com/NeRooNx/BPSR-Meter), featuring improved performance with Vite, Tailwind CSS, and optimized DOM updates.
 
+<img width="1458" height="782" alt="image" src="https://github.com/user-attachments/assets/3f949d1e-4293-49ce-a397-b10a0c64c9e9" />
+
 ---
 
 ## Features
@@ -24,7 +26,7 @@ A DPS meter for Blue Protocol built with Electron, React 19, and TypeScript. Thi
 - **Windows OS**
 - **[Npcap](https://npcap.com/#download)** - Required for packet capture
 
-### Windivert Users
+### Windivert Users [Exit Lag/VPN]
 
 - You need to restart the application as admin for it to work. Npcap installation is still required since it's enabled by default.
 
