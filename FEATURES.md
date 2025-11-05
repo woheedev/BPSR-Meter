@@ -297,7 +297,34 @@ All windows (Main, Settings, Group, History, Monsters) have these controls:
 | **Lock** | Lock window position (prevents accidental movement) |
 | **Zoom In** | Increase window size/scale |
 | **Zoom Out** | Decrease window size/scale |
+| **Increase Height** | Increase window height (hold to repeat) - Main only |
+| **Decrease Height** | Decrease window height (hold to repeat) - Main only |
 | **Close** | Close the window |
+
+### Height Adjustment
+
+**Location**: Main window control bar (height adjustment buttons)
+
+Control the vertical size of the main window to eliminate scrollbars or adjust visible content.
+
+**Features**:
+- **Increase/Decrease buttons**: Click to adjust window height
+- **Hold-down support**: Hold the button to continuously adjust height
+- **Customizable step size**: Configure how much height changes per click
+
+**Customizing Step Size**:
+
+**Location**: Settings Window → Performance Options → Height adjustment step (px)
+
+**Range**: 10-200 pixels per click
+**Default**: 20 pixels
+
+**How to use**:
+1. Unlock the window (if locked)
+2. Click the height adjustment buttons (compress/expand icons)
+3. Hold buttons for continuous adjustment
+4. Adjust step size in Settings for faster/slower increments
+5. Window and content will resize together
 
 ### Window Sizes
 Window sizes and scales are automatically saved and restored when you reopen them.
