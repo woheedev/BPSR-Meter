@@ -15,7 +15,7 @@ const Cap = cap.Cap;
 async function checkNpcap(logger: Logger) {
     try {
         const devices = Cap.deviceList();
-        if ( !devices || devices.length === 0 || devices.every((d) => d.name.includes("Loopback")) ) {
+        if (!devices || devices.length === 0 || devices.every((d) => d.name.includes("Loopback"))) {
             throw new Error("Npcap not detected or not functional.");
         }
         logger.info("Npcap detected and functional.");
@@ -209,8 +209,7 @@ class Sniffer {
 
         const srcport = tcpPacket.info.srcport;
         const dstport = tcpPacket.info.dstport;
-        const src_server =
-            srcaddr + ":" + srcport + " -> " + dstaddr + ":" + dstport;
+        const src_server = srcaddr + ":" + srcport + " -> " + dstaddr + ":" + dstport;
 
         await this.tcp_lock.acquire();
         try {
@@ -252,24 +251,24 @@ class Sniffer {
                                             this.userDataManager.users.size !==
                                             0
                                         ) {
-                                        const lp = this.globalSettings.lastPausedAt || 0;
-                                        const lr = this.globalSettings.lastResumedAt || 0;
-                                        const wasPausedThenResumed = lp > 0 && lr > lp;
-                                        if (!wasPausedThenResumed) {
-                                            this.userDataManager.clearAll(true);
-                                            console.log(
-                                                "Server changed, statistics cleared!",
-                                            );
-                                        } else {
-                                            console.log(
-                                                "Server changed detected but skip clear because pause->resume was observed.",
-                                            );
-                                        }                                            try {
+                                            const lp = this.globalSettings.lastPausedAt || 0;
+                                            const lr = this.globalSettings.lastResumedAt || 0;
+                                            const wasPausedThenResumed = lp > 0 && lr > lp;
+                                            if (!wasPausedThenResumed) {
+                                                this.userDataManager.clearAll(true);
+                                                this.logger.info(
+                                                    "Server changed, statistics cleared!",
+                                                );
+                                            } else {
+                                                this.logger.info(
+                                                    "Server changed detected but skip clear because pause->resume was observed.",
+                                                );
+                                            } try {
                                                 this.globalSettings.lastPausedAt = null;
                                                 this.globalSettings.lastResumedAt = null;
                                             } catch (e) { }
                                         }
-                                        console.log(
+                                        this.logger.info(
                                             "Game server detected. Measuring DPS...",
                                         );
                                     }
@@ -310,11 +309,11 @@ class Sniffer {
                                     const wasPausedThenResumed = lp > 0 && lr > lp;
                                     if (!wasPausedThenResumed) {
                                         this.userDataManager.clearAll(true);
-                                        console.log(
+                                        this.logger.info(
                                             "Server changed, statistics cleared!",
                                         );
                                     } else {
-                                        console.log(
+                                        this.logger.info(
                                             "Server changed detected but skip clear because pause->resume was observed.",
                                         );
                                     }
@@ -323,7 +322,7 @@ class Sniffer {
                                         this.globalSettings.lastResumedAt = null;
                                     } catch (e) { }
                                 }
-                                console.log(
+                                this.logger.info(
                                     "Game server detected by login packet. Measuring DPS...",
                                 );
                             }

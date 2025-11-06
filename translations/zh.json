@@ -87,6 +87,7 @@
             "save": "保存",
             "delete": "删除",
             "bossesOnly": "仅显示Boss",
+            "magicalOnly": "魔法生物",
             "allMonsters": "所有怪物",
             "sort": "排序",
             "asc": "升序 ↑",

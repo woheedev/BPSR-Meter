@@ -31,7 +31,7 @@ export default function MonstersApp(): React.JSX.Element {
     const [sortKey, setSortKey] = useState<"id" | "name" | "hp" | "distance">("distance");
     const [sortDesc, setSortDesc] = useState<boolean>(false);
     const [translatedNames, setTranslatedNames] = useState<Record<number, string>>({});
-    const [bossOnlyMode, setBossOnlyMode] = useState<boolean>(false);
+    const [filterMode, setFilterMode] = useState<"all" | "bosses" | "magical">("all");
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
     const [activeTab, setActiveTab] = useState<"monsters" | "schedule">("monsters");
     const previousMonstersRef = useRef<Record<string, MonsterEntry>>({});
@@ -244,8 +244,8 @@ export default function MonstersApp(): React.JSX.Element {
             ) : activeTab === "monsters" ? (
                 <MonsterList
                     monsters={monsters}
-                    bossOnlyMode={bossOnlyMode}
-                    setBossOnlyMode={setBossOnlyMode}
+                    filterMode={filterMode}
+                    setFilterMode={setFilterMode}
                     sortKey={sortKey}
                     setSortKey={setSortKey}
                     sortDesc={sortDesc}

@@ -1,6 +1,6 @@
 import React from "react";
 import SortDropdown from "./SortDropdown";
-import { TRACKED_MONSTER_IDS } from "../shared/constants";
+import { BOSS_MONSTER_IDS, MAGICAL_CREATURE_IDS } from "../shared/constants";
 import { formatStat } from "../shared/utils/formatters";
 import { getNextSpawnTime, formatTimeUntilSpawn } from "./bossSpawnTimes";
 import { monsterRespawnTracker } from "./monsterRespawnTracker";
@@ -18,8 +18,8 @@ interface MonsterEntry {
 
 interface MonsterListProps {
     monsters: Record<string, MonsterEntry>;
-    bossOnlyMode: boolean;
-    setBossOnlyMode: (value: boolean | ((prev: boolean) => boolean)) => void;
+    filterMode: "all" | "bosses" | "magical";
+    setFilterMode: (value: "all" | "bosses" | "magical") => void;
     sortKey: "id" | "name" | "hp" | "distance";
     setSortKey: (value: "id" | "name" | "hp" | "distance") => void;
     sortDesc: boolean;
@@ -29,35 +29,69 @@ interface MonsterListProps {
 
 export default function MonsterList({
     monsters,
-    bossOnlyMode,
-    setBossOnlyMode,
+    filterMode,
+    setFilterMode,
     sortKey,
     setSortKey,
     sortDesc,
     setSortDesc,
     t
 }: MonsterListProps): React.JSX.Element {
+    const getFilteredCount = () => {
+        if (filterMode === "all") return Object.keys(monsters).length;
+        if (filterMode === "bosses") {
+            return Object.values(monsters).filter(m => m.monster_id && BOSS_MONSTER_IDS.has(String(m.monster_id))).length;
+        }
+        if (filterMode === "magical") {
+            return Object.values(monsters).filter(m => m.monster_id && MAGICAL_CREATURE_IDS.has(String(m.monster_id))).length;
+        }
+        return 0;
+    };
+
+    const MERGED_MONSTER_IDS = new Set([
+        ...BOSS_MONSTER_IDS,
+        ...MAGICAL_CREATURE_IDS
+    ]);
+
     return (
         <div className="monsters-container">
             <div className="flex justify-between items-center mb-2 gap-2">
                 <div className="flex items-center gap-2">
                     <div className="text-sm font-semibold">
-                        {t("ui.messages.monsters")} ({
-                            bossOnlyMode
-                                ? Object.values(monsters).filter(m => m.monster_id && TRACKED_MONSTER_IDS.has(String(m.monster_id))).length
-                                : Object.keys(monsters).length
-                        })
+                        {t("ui.messages.monsters")} ({getFilteredCount()})
                     </div>
-                    <button
-                        onClick={() => setBossOnlyMode((prev) => !prev)}
-                        className="text-xs px-2 py-1 rounded"
-                        style={{
-                            background: bossOnlyMode ? "#3498db" : "rgba(255,255,255,0.1)",
-                            color: bossOnlyMode ? "#fff" : "rgba(255,255,255,0.7)"
-                        }}
-                    >
-                        {bossOnlyMode ? t("ui.buttons.bossesOnly") : t("ui.buttons.allMonsters")}
-                    </button>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => setFilterMode("all")}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                                background: filterMode === "all" ? "#3498db" : "rgba(255,255,255,0.1)",
+                                color: filterMode === "all" ? "#fff" : "rgba(255,255,255,0.7)"
+                            }}
+                        >
+                            {t("ui.buttons.allMonsters")}
+                        </button>
+                        <button
+                            onClick={() => setFilterMode("bosses")}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                                background: filterMode === "bosses" ? "#e74c3c" : "rgba(255,255,255,0.1)",
+                                color: filterMode === "bosses" ? "#fff" : "rgba(255,255,255,0.7)"
+                            }}
+                        >
+                            {t("ui.buttons.bossesOnly")}
+                        </button>
+                        <button
+                            onClick={() => setFilterMode("magical")}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                                background: filterMode === "magical" ? "#9b59b6" : "rgba(255,255,255,0.1)",
+                                color: filterMode === "magical" ? "#fff" : "rgba(255,255,255,0.7)"
+                            }}
+                        >
+                            {t("ui.buttons.magicalOnly", "Magical")}
+                        </button>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <label className="text-xs">{t("ui.buttons.sort")}:</label>
@@ -80,19 +114,25 @@ export default function MonsterList({
             <table className="monsters-table w-full border-collapse">
                 <thead>
                     <tr>
-                        <th className="text-left p-1">{t("ui.messages.name")}</th>
-                        <th className="text-center p-1">{t("ui.messages.hp")}</th>
-                        <th className="text-center p-1">{t("ui.messages.direction")}</th>
-                        <th className="text-right p-1 pl-5">{t("ui.messages.distance")}</th>
-                        <th className="text-center p-1 pl-5">{t("ui.messages.nextSpawn")}</th>
+                        <th className="text-sm text-left p-1">{t("ui.messages.name")}</th>
+                        <th className="text-sm text-center p-1">{t("ui.messages.hp")}</th>
+                        <th className="text-sm text-center p-1">{t("ui.messages.direction")}</th>
+                        <th className="text-sm text-right p-1 pl-5">{t("ui.messages.distance")}</th>
+                        <th className="text-sm text-center p-1 pl-5">{t("ui.messages.nextSpawn")}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {Object.entries(monsters)
                         .map(([id, m]) => ({ id, ...m }))
                         .filter((m) => {
-                            if (!bossOnlyMode) return true;
-                            return m.monster_id && TRACKED_MONSTER_IDS.has(String(m.monster_id));
+                            if (filterMode === "all") return true;
+                            if (filterMode === "bosses") {
+                                return m.monster_id && BOSS_MONSTER_IDS.has(String(m.monster_id));
+                            }
+                            if (filterMode === "magical") {
+                                return m.monster_id && MAGICAL_CREATURE_IDS.has(String(m.monster_id));
+                            }
+                            return true;
                         })
                         .sort((a, b) => {
                             if (sortKey === "hp") {
@@ -122,7 +162,7 @@ export default function MonsterList({
                                 : "-";
                             const direction = m.direction ?? "-";
 
-                            let spawnInfo = m.monster_id && TRACKED_MONSTER_IDS.has(String(m.monster_id))
+                            let spawnInfo = m.monster_id && MERGED_MONSTER_IDS.has(String(m.monster_id))
                                 ? getNextSpawnTime(String(m.monster_id))
                                 : null;
 
