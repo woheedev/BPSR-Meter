@@ -56,11 +56,11 @@ export default function MonsterList({
                             color: bossOnlyMode ? "#fff" : "rgba(255,255,255,0.7)"
                         }}
                     >
-                        {bossOnlyMode ? t("ui.buttons.bossesOnly", "Bosses Only") : t("ui.buttons.allMonsters")}
+                        {bossOnlyMode ? t("ui.buttons.bossesOnly") : t("ui.buttons.allMonsters")}
                     </button>
                 </div>
                 <div className="flex items-center gap-2">
-                    <label className="text-xs">{t("ui.buttons.sort", "Sort")}:</label>
+                    <label className="text-xs">{t("ui.buttons.sort")}:</label>
                     <div className="min-w-[140px]">
                         <SortDropdown value={sortKey} onChange={(v) => setSortKey(v as any)} />
                     </div>
@@ -72,7 +72,7 @@ export default function MonsterList({
                             color: "#fff"
                         }}
                     >
-                        {sortDesc ? t("ui.buttons.desc", "Desc ↓") : t("ui.buttons.asc", "Asc ↑")}
+                        {sortDesc ? t("ui.buttons.desc") : t("ui.buttons.asc")}
                     </button>
                 </div>
             </div>
