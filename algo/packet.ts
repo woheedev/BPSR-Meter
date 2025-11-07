@@ -6,7 +6,7 @@ import path from 'path';
 import pb from './blueprotobuf-esm';
 import type { Logger } from '../src/types';
 import type { UserDataManager } from '../src/server/dataManager';
-import { initialize, TRACKED_MONSTER_IDS } from '../src/utils/bpTimer';
+import { BPTimerClient } from "@woheedev/bptimer-api-client";
 
 const TRANSLATIONS_DIR = path.join(__dirname, "../main/translations");
 let monsterNames: Record<string, string> = JSON.parse(fs.readFileSync(path.join(TRANSLATIONS_DIR, "en.json"), "utf-8")).monsters;
@@ -273,10 +273,28 @@ let currentUserUuid = Long.ZERO;
 class PacketProcessor {
     logger: Logger;
     userDataManager: UserDataManager;
+    bpTimerClient: BPTimerClient;
 
     constructor({ logger, userDataManager }: { logger: Logger; userDataManager: UserDataManager }) {
         this.logger = logger
         this.userDataManager = userDataManager;
+
+        // @ts-ignore
+        const DB_URL = import.meta.env.VITE_BPTIMER_DB_URL;
+        // @ts-ignore
+        const API_KEY = import.meta.env.VITE_BPTIMER_API_KEY;
+
+        this.bpTimerClient = new BPTimerClient({
+            api_url: DB_URL,
+            api_key: API_KEY,
+            logger: {
+                info: (message: string) => this.logger.info(message),
+                debug: (message: string) => this.logger.debug(message)
+            },
+        });
+
+        // Test API connection on startup
+        this.bpTimerClient.testConnection();
     }
 
     #decompressPayload(buffer: Buffer) {
@@ -391,30 +409,10 @@ class PacketProcessor {
 
                     if (isDead) {
                         const enemyUid = targetUuid.toNumber();
-                        const monsterId = this.userDataManager.enemyCache.monsterId.get(enemyUid);
-                        const monsterName = this.userDataManager.enemyCache.name.get(enemyUid);
 
                         if (!this.userDataManager.enemyCache.isDead.get(enemyUid)) {
                             this.userDataManager.enemyCache.isDead.set(enemyUid, true);
                             this.userDataManager.enemyCache.hp.set(enemyUid, 0);
-
-                            if (monsterId && TRACKED_MONSTER_IDS.has(String(monsterId))) {
-                                this.logger.debug(`[BPTimer] Tracked boss ${monsterName || 'Unknown'} [ID: ${monsterId}] (${enemyUid}) died on line ${this.userDataManager.getCurrentLineId()}`);
-
-                                if (this.userDataManager.globalSettings.enableBPTimerSubmission !== false) {
-                                    const line = this.userDataManager.getCurrentLineId();
-                                    const bpTimer = initialize(this.logger, this.userDataManager.globalSettings);
-
-                                    bpTimer.createHpReport(monsterId, 0, line).catch(err => {
-                                        this.logger.error(`[BPTimer] Failed to report death: ${err.message}`);
-                                    });
-
-                                    setTimeout(() => {
-                                        bpTimer.resetMonster(monsterId, line);
-                                        this.logger.debug(`[BPTimer] Reset tracking for monster ${monsterId} on line ${line} (isDead flag)`);
-                                    }, 3000);
-                                }
-                            }
                         }
                     }
                 }
@@ -757,14 +755,6 @@ class PacketProcessor {
 
                     if (enemyHp > 0 && this.userDataManager.enemyCache.isDead.get(enemyUid)) {
                         this.userDataManager.enemyCache.isDead.delete(enemyUid);
-
-                        const monsterId = this.userDataManager.enemyCache.monsterId.get(enemyUid);
-                        if (monsterId && TRACKED_MONSTER_IDS.has(String(monsterId))) {
-                            const line = this.userDataManager.getCurrentLineId();
-                            const bpTimer = initialize(this.logger, this.userDataManager.globalSettings);
-                            bpTimer.resetMonster(monsterId, line);
-                            this.logger.debug(`[BPTimer] Reset tracking for respawned monster ${monsterId} on line ${line}`);
-                        }
                     }
 
                     this.#reportBossHpThreshold(enemyUid, enemyHp);
@@ -799,24 +789,8 @@ class PacketProcessor {
                 return;
             }
 
-            if (!TRACKED_MONSTER_IDS.has(String(monsterId))) {
-                return;
-            }
-
             if (currentHp === 0 || currentHp <= maxHp * 0.001) {
-                const line = this.userDataManager.getCurrentLineId();
-                const bpTimer = initialize(this.logger, this.userDataManager.globalSettings);
-
-                bpTimer.createHpReport(monsterId, 0, line).catch(err => {
-                    this.logger.debug(`[BPTimer] Failed to report death (fallback): ${err.message}`);
-                });
-
                 this.userDataManager.enemyCache.isDead.set(enemyUid, true);
-
-                setTimeout(() => {
-                    bpTimer.resetMonster(monsterId, line);
-                    this.logger.debug(`[BPTimer] Reset tracking for monster ${monsterId} on line ${line} (HP reached 0 fallback)`);
-                }, 3000);
                 return;
             }
 
@@ -824,10 +798,13 @@ class PacketProcessor {
 
             const line = this.userDataManager.getCurrentLineId();
 
-            const bpTimer = initialize(this.logger, this.userDataManager.globalSettings);
-            bpTimer.createHpReport(monsterId, hpPercentage, line).catch(err => {
-                this.logger.debug(`[BPTimer] Failed to report HP threshold: ${err.message}`);
-            });
+            this.bpTimerClient
+                .reportHP(monsterId, hpPercentage, line)
+                .catch((err) => {
+                    this.logger.debug(
+                        `[BPTimer] Failed to report HP threshold: ${err.message}`,
+                    );
+                });
         } catch (error) {
             this.logger.debug(`[BPTimer] Error in HP threshold reporting: ${error}`);
         }
