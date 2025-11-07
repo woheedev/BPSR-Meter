@@ -15,6 +15,7 @@ A DPS meter for Blue Protocol built with Electron, React 19, and TypeScript. Thi
 - **Combat history** with session logging and export
 - **Auto-update checker** via GitHub releases
 - **Multiple language support** (English, Chinese)
+- **Global keyboard shortcuts** for quick window access (configurable keybinds)
 - **Windivert/Npcap support** windivert is integrated, npcap has to be installed manually
 
 ---

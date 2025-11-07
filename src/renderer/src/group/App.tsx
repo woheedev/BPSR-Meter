@@ -7,10 +7,12 @@ import {
     PlayerRegistrySection,
     ClearGroupButton,
 } from "./components";
+import ResizeHandle from "../shared/components/ResizeHandle";
 import { useGroupState, useAvailablePlayers } from "./hooks";
 import { useWindowControls, useSocket } from "../shared/hooks";
 import { usePlayerRegistry } from "../main/hooks/usePlayerRegistry";
 import { useTranslations } from "../shared/hooks/useTranslations";
+import { useWindowResize } from "../shared/hooks/useWindowResize";
 
 export function GroupApp(): React.JSX.Element {
     const {
@@ -35,6 +37,8 @@ export function GroupApp(): React.JSX.Element {
             baseHeight: 530,
             windowType: "group",
         });
+
+    const { handleResizeStart } = useWindowResize("group");
 
     const handleAddPlayer = useCallback(
         async (uuid: string) => {
@@ -64,12 +68,81 @@ export function GroupApp(): React.JSX.Element {
         [addToRegistry],
     );
 
+    useEffect(() => {
+        try {
+            const amount = localStorage.getItem("transparencyAmount") ?? "70";
+            const opacity = parseFloat(amount) / 100;
+            document.documentElement.style.setProperty(
+                "--transparency-amount",
+                opacity.toString(),
+            );
+        } catch (err) {
+            console.warn("Failed to apply transparency amount", err);
+        }
+
+        try {
+            const unsubscribe = window.electron.onTransparencySettingChanged?.(
+                (isDisabled: boolean) => {
+                    document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
+                },
+            );
+            return unsubscribe;
+        } catch (err) {
+            console.warn("Failed to setup transparency listener", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = window.electron.onTransparencyAmountChanged?.(
+            (amount: number) => {
+                try {
+                    const opacity = amount / 100;
+                    document.documentElement.style.setProperty(
+                        "--transparency-amount",
+                        opacity.toString(),
+                    );
+                    localStorage.setItem("transparencyAmount", amount.toString());
+                } catch (err) {
+                    console.warn("Failed to update transparency amount", err);
+                }
+            },
+        );
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        try {
+            const enabled = localStorage.getItem("clickthroughEnabled") === "true";
+            window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
+        } catch (err) {
+            console.warn("Failed to apply clickthrough setting", err);
+        }
+
+        const unsubscribe = window.electron.onClickthroughChanged?.(
+            (enabled: boolean) => {
+                try {
+                    window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
+                    localStorage.setItem("clickthroughEnabled", enabled.toString());
+                } catch (err) {
+                    console.warn("Failed to update clickthrough setting", err);
+                }
+            },
+        );
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
     const handleDeleteFromRegistry = useCallback(
         async (uid: string) => {
             try {
-                const result = await emitWithResponse({ 
-                    event: "deleteFromPlayerRegistry", 
-                    data: { uid } 
+                const result = await emitWithResponse({
+                    event: "deleteFromPlayerRegistry",
+                    data: { uid }
                 });
 
                 if (result.code === 0) {
@@ -87,7 +160,7 @@ export function GroupApp(): React.JSX.Element {
         try {
             const disableTransparency = localStorage.getItem("disableTransparency") === "true";
             document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
-            
+
             const performanceMode = localStorage.getItem("performanceMode") === "true";
             if (performanceMode) {
                 document.body.classList.add("performance-mode");
@@ -99,7 +172,7 @@ export function GroupApp(): React.JSX.Element {
         }
 
         try {
-            const unsubscribe = window.electronAPI.onTransparencySettingChanged?.((isDisabled: boolean) => {
+            const unsubscribe = window.electron.onTransparencySettingChanged?.((isDisabled: boolean) => {
                 document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
             });
             return unsubscribe;
@@ -108,37 +181,10 @@ export function GroupApp(): React.JSX.Element {
         }
     }, []);
 
-    useEffect(() => {
-        let debounceTimer: number | null = null;
-
-        const resizeIfNeeded = (width: number, height: number) => {
-            if (!isDragging) {
-                window.electronAPI.resizeWindowToContent("group", width, height, scale);
-            }
-        };
-
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            const cr = entry.target.getBoundingClientRect();
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            debounceTimer = window.setTimeout(() => {
-                resizeIfNeeded(Math.ceil(cr.width), Math.ceil(cr.height));
-                debounceTimer = null;
-            }, 80);
-        });
-
-        const el = document.querySelector(".group-window");
-        if (el) observer.observe(el);
-
-        return () => {
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            observer.disconnect();
-        };
-    }, [isDragging, scale]);
-
     return (
         <div className="group-window">
+            <ResizeHandle handleResizeStart={handleResizeStart} />
+
             <GroupHeader
                 onClose={handleClose}
                 onDragStart={handleDragStart}

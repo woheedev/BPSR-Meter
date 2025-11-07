@@ -72,7 +72,9 @@ export interface Settings {
     isPaused: boolean;
     enableFightLog?: boolean;
     enableHistorySave?: boolean;
+    saveOnLineSwitch?: boolean;
     autoClearOnTimeout?: boolean;
+    autoClearTimeoutSeconds?: number;
     autoClearOnServerChange?: boolean;
     onlyRecordEliteDummy?: boolean;
     language?: string;
@@ -83,9 +85,22 @@ export interface Settings {
         group?: { width: number; height: number };
         history?: { width: number; height: number };
     };
-    // Timestamps to track when pause/resume happened (milliseconds since epoch)
+    selectedDevice?: number | string | null;
+    captureBackend?: "npcap" | "windivert";
     lastPausedAt?: number | null;
     lastResumedAt?: number | null;
+    enableBPTimerSubmission?: boolean;
+    performanceMode?: boolean;
+    updateIntervalMs?: number;
+    disableTransparency?: boolean;
+    transparencyAmount?: number;
+    lockPosition?: boolean;
+    lockKeybind?: string;
+    monstersKeybind?: string;
+    groupKeybind?: string;
+    settingsKeybind?: string;
+    deviceKeybind?: string;
+    historyKeybind?: string;
 }
 
 // Manual group types

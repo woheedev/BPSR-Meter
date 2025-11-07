@@ -4,6 +4,8 @@ import { useHistoryList, useHistoryDetails, useHistorySettings } from "./hooks";
 import { useWindowControls, useSocket } from "../shared/hooks";
 import { usePlayerRegistry } from "../main/hooks/usePlayerRegistry";
 import { useTranslations } from "../shared/hooks/useTranslations";
+import { useWindowResize } from "../shared/hooks/useWindowResize";
+import ResizeHandle from "../shared/components/ResizeHandle";
 
 export function HistoryApp(): React.JSX.Element {
     // Hooks
@@ -42,6 +44,8 @@ export function HistoryApp(): React.JSX.Element {
             windowType: "history",
         });
 
+    const { handleResizeStart } = useWindowResize("history");
+
     useEffect(() => {
         refreshHistoryList();
     }, [refreshHistoryList]);
@@ -61,9 +65,20 @@ export function HistoryApp(): React.JSX.Element {
 
     useEffect(() => {
         try {
+            const amount = localStorage.getItem("transparencyAmount") ?? "70";
+            const opacity = parseFloat(amount) / 100;
+            document.documentElement.style.setProperty(
+                "--transparency-amount",
+                opacity.toString(),
+            );
+        } catch (err) {
+            console.warn("Failed to apply transparency amount", err);
+        }
+
+        try {
             const disableTransparency = localStorage.getItem("disableTransparency") === "true";
             document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
-            
+
             const performanceMode = localStorage.getItem("performanceMode") === "true";
             if (performanceMode) {
                 document.body.classList.add("performance-mode");
@@ -75,14 +90,60 @@ export function HistoryApp(): React.JSX.Element {
         }
 
         try {
-            const unsubscribe = window.electronAPI.onTransparencySettingChanged?.((isDisabled: boolean) => {
-                document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-            });
-        
+            const unsubscribe = window.electron.onTransparencySettingChanged?.(
+                (isDisabled: boolean) => {
+                    document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
+                },
+            );
             return unsubscribe;
         } catch (err) {
             console.warn("Failed to setup transparency listener", err);
         }
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = window.electron.onTransparencyAmountChanged?.(
+            (amount: number) => {
+                try {
+                    const opacity = amount / 100;
+                    document.documentElement.style.setProperty(
+                        "--transparency-amount",
+                        opacity.toString(),
+                    );
+                    localStorage.setItem("transparencyAmount", amount.toString());
+                } catch (err) {
+                    console.warn("Failed to update transparency amount", err);
+                }
+            },
+        );
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        try {
+            const enabled = localStorage.getItem("clickthroughEnabled") === "true";
+            window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
+        } catch (err) {
+            console.warn("Failed to apply clickthrough setting", err);
+        }
+
+        const unsubscribe = window.electron.onClickthroughChanged?.(
+            (enabled: boolean) => {
+                try {
+                    window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
+                    localStorage.setItem("clickthroughEnabled", enabled.toString());
+                } catch (err) {
+                    console.warn("Failed to update clickthrough setting", err);
+                }
+            },
+        );
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     useEffect(() => {
@@ -110,13 +171,13 @@ export function HistoryApp(): React.JSX.Element {
 
     const handleDeleteItem = useCallback(async (timestamp: string) => {
         try {
-            if (!window.electronAPI?.deleteHistoryLog) {
+            if (!window.electron?.deleteHistoryLog) {
                 console.error("deleteHistoryLog API not available");
                 return;
             }
-            
-            const result = await window.electronAPI.deleteHistoryLog(timestamp);
-            
+
+            const result = await window.electron.deleteHistoryLog(timestamp);
+
             if (result.success) {
                 if (selectedTimestamp === timestamp) {
                     loadDetails(null);
@@ -132,37 +193,10 @@ export function HistoryApp(): React.JSX.Element {
         }
     }, [selectedTimestamp, loadDetails, refreshHistoryList]);
 
-    useEffect(() => {
-        let debounceTimer: number | null = null;
-
-        const resizeIfNeeded = (width: number, height: number) => {
-            if (!isDragging) {
-                window.electronAPI.resizeWindowToContent("history", width, height, scale);
-            }
-        };
-
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            const cr = entry.target.getBoundingClientRect();
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            debounceTimer = window.setTimeout(() => {
-                resizeIfNeeded(Math.ceil(cr.width), Math.ceil(cr.height));
-                debounceTimer = null;
-            }, 80);
-        });
-
-        const el = document.querySelector(".history-window");
-        if (el) observer.observe(el);
-
-        return () => {
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            observer.disconnect();
-        };
-    }, [isDragging, scale]);
-
     return (
         <div className="history-window">
+            <ResizeHandle handleResizeStart={handleResizeStart} />
+
             <HistoryHeader
                 onClose={handleClose}
                 onDragStart={handleDragStart}

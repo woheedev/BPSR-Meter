@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { setItem } from "../../shared/utils/localStorage";
 
 export interface UseWindowControlsOptions {
     baseWidth: number;
@@ -7,11 +8,15 @@ export interface UseWindowControlsOptions {
 }
 
 export interface UseWindowControlsReturn {
+    isLocked: boolean;
     scale: number;
     isDragging: boolean;
+    toggleLock: () => void;
     zoomIn: () => void;
     zoomOut: () => void;
     handleDragStart: (e: React.MouseEvent) => void;
+    handleMouseOver: (e: React.MouseEvent) => void;
+    handleMouseOut: (e: React.MouseEvent) => void;
     handleClose: () => void;
 }
 
@@ -20,9 +25,10 @@ export function useWindowControls(
 ): UseWindowControlsReturn {
     const { baseWidth, baseHeight, windowType } = options;
 
+    const [isLocked, setIsLocked] = useState<boolean>(false);
     const [scale, setScale] = useState<number>(1);
     const [isDragging, setIsDragging] = useState<boolean>(false);
-
+    const currentMouseEventsStateRef = useRef<boolean>(false);
     const dragStateRef = useRef<{
         startX: number;
         startY: number;
@@ -32,11 +38,8 @@ export function useWindowControls(
 
     useEffect(() => {
         const loadSavedScale = async () => {
-            if (!window.electronAPI) return;
-
             try {
-                const savedSizes =
-                    await window.electronAPI.getSavedWindowSizes();
+                const savedSizes = await window.electron.getSavedWindowSizes();
                 const savedScale = savedSizes[windowType]?.scale;
 
                 if (savedScale) {
@@ -62,8 +65,6 @@ export function useWindowControls(
 
     const applyScale = useCallback(
         (newScale: number) => {
-            if (!window.electronAPI) return;
-
             const clampedScale = Math.max(0.6, Math.min(1.8, newScale));
             setScale(clampedScale);
 
@@ -72,21 +73,12 @@ export function useWindowControls(
                 clampedScale.toString(),
             );
 
-            const scaledWidth = Math.floor(baseWidth * clampedScale);
-            const scaledHeight = Math.floor(baseHeight * clampedScale);
-
-            window.electronAPI.resizeWindowToContent(
-                windowType,
-                scaledWidth,
-                scaledHeight,
-                clampedScale,
-            );
-
             setTimeout(() => {
-                window.electronAPI.saveWindowSize(
+                setItem(`${windowType}.scale`, clampedScale);
+                window.electron.saveWindowSize(
                     windowType,
-                    scaledWidth,
-                    scaledHeight,
+                    undefined,
+                    undefined,
                     clampedScale,
                 );
             }, 100);
@@ -104,13 +96,11 @@ export function useWindowControls(
     }, [scale, applyScale]);
 
     const handleDragStart = useCallback(async (e: React.MouseEvent) => {
-        if (!window.electronAPI) return;
-
         setIsDragging(true);
 
         const startX = e.screenX;
         const startY = e.screenY;
-        const position = await window.electronAPI.getWindowPosition();
+        const position = await window.electron.getWindowPosition();
 
         dragStateRef.current = {
             startX,
@@ -122,9 +112,24 @@ export function useWindowControls(
         e.preventDefault();
     }, []);
 
+    // Setup lock state listener
+    useEffect(() => {
+        window.electron.setIgnoreMouseEvents(false);
+        currentMouseEventsStateRef.current = false;
+
+        window.electron.onLockStateChanged((locked: boolean) => {
+            setIsLocked(locked);
+            updateClickThroughState(locked, currentMouseEventsStateRef);
+        });
+    }, []);
+
+    const toggleLock = useCallback(() => {
+        window.electron.toggleLockState();
+    }, []);
+
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !window.electronAPI || !dragStateRef.current)
+            if (!isDragging || !dragStateRef.current)
                 return;
 
             const deltaX = e.screenX - dragStateRef.current.startX;
@@ -132,7 +137,7 @@ export function useWindowControls(
             const newX = dragStateRef.current.startWindowX + deltaX;
             const newY = dragStateRef.current.startWindowY + deltaY;
 
-            window.electronAPI.setWindowPosition(newX, newY);
+            window.electron.setWindowPosition(windowType, newX, newY);
         };
 
         const handleMouseUp = () => {
@@ -144,7 +149,7 @@ export function useWindowControls(
         };
 
         const handlePointerMove = (e: PointerEvent) => {
-            if (!isDragging || !window.electronAPI || !dragStateRef.current)
+            if (!isDragging || !dragStateRef.current)
                 return;
 
             const deltaX = e.screenX - dragStateRef.current.startX;
@@ -152,7 +157,7 @@ export function useWindowControls(
             const newX = dragStateRef.current.startWindowX + deltaX;
             const newY = dragStateRef.current.startWindowY + deltaY;
 
-            window.electronAPI.setWindowPosition(newX, newY);
+            window.electron.setWindowPosition(windowType, newX, newY);
         };
 
         const handlePointerUp = (e: PointerEvent) => {
@@ -177,19 +182,84 @@ export function useWindowControls(
         };
     }, [isDragging]);
 
-    // Handle window close
+    const handleMouseOver = useCallback(
+        (e: React.MouseEvent) => {
+            if (!isLocked) return;
+
+            const isLockButton = (e.target as Element).closest("#lock-button") !== null;
+
+            if (isLockButton) {
+                enableMouseEvents(currentMouseEventsStateRef);
+            }
+        },
+        [isLocked],
+    );
+
+    const handleMouseOut = useCallback(
+        (e: React.MouseEvent) => {
+            if (!isLocked) return;
+
+            const relatedTarget = e.relatedTarget as Element | null;
+            const isLeavingLockButton = relatedTarget?.closest("#lock-button") === null;
+
+            if (isLeavingLockButton) {
+                setTimeout(() => {
+                    disableMouseEvents(currentMouseEventsStateRef);
+                }, 50);
+            }
+        },
+        [isLocked],
+    );
+
     const handleClose = useCallback(() => {
-        if (window.electronAPI) {
-            window.electronAPI.closeWindow();
-        }
+        window.electron.closeWindow();
     }, []);
 
     return {
+        isLocked,
         scale,
         isDragging,
+        toggleLock,
         zoomIn,
         zoomOut,
         handleDragStart,
         handleClose,
+        handleMouseOver,
+        handleMouseOut,
     };
+}
+
+function updateClickThroughState(
+    locked: boolean,
+    mouseEventsStateRef: React.RefObject<boolean>,
+): void {
+    if (locked) {
+        window.electron.setIgnoreMouseEvents(true, { forward: true });
+        mouseEventsStateRef.current = true;
+        console.log("Locked mode: click-through ENABLED");
+    } else {
+        window.electron.setIgnoreMouseEvents(false);
+        mouseEventsStateRef.current = false;
+        console.log("Unlocked mode: Mouse events ENABLED (fully interactive)");
+    }
+}
+
+function enableMouseEvents(
+    mouseEventsStateRef: React.RefObject<boolean>,
+): void {
+    if (mouseEventsStateRef.current) {
+        window.electron.setIgnoreMouseEvents(false);
+        mouseEventsStateRef.current = false;
+        console.log("Mouse events ENABLED");
+    }
+}
+
+function disableMouseEvents(
+    mouseEventsStateRef: React.RefObject<boolean>,
+): void {
+    if (!mouseEventsStateRef.current) {
+        window.electron.setIgnoreMouseEvents(true, { forward: true });
+        mouseEventsStateRef.current = true;
+        console.log("Mouse events DISABLED (click-through)");
+    }
 }

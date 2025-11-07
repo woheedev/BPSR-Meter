@@ -13,31 +13,32 @@ export interface BossSpawnConfig {
 export const BOSS_SPAWN_CONFIGS: BossSpawnConfig[] = [
     {
         monsterIds: [
-            '80006', '10032',  // Golden Juggernaut
-            '80004', '10018',  // Inferno Ogre
-            '10056',           // Brigand Leader
-            '80007', '10059',  // Muku Chief
-            '80001', '10007', '61219', '61220', '61221',  // Storm Goblin King
+            '10032',  // Golden Juggernaut
+            '10018',  // Inferno Ogre
+            '10056',  // Brigand Leader
+            '10059',  // Muku Chief
+            '10007',  // Storm Goblin King
             '10084',  // Celestial Flier
-            '8070', '10086', '20028', '20070', '20107', '7700001', '2000134', '2000138', '2004164', '2004169',  // Goblin King
+            '10086',  // Goblin King
         ],
         spawnType: SpawnType.ON_THE_HOUR,
     },
     {
         monsterIds: [
-            '108', '10009', '20100', '20127', '80002', '2000129', '2000140', '2004172',  // Frost Ogre
-            '80008', '10069',  // Phantom Arachnocrab
-            '80009', '10077',  // Venobzzar Incubator
-            '8611', '80010', '10081',  // Iron Fang
-            '10010', '20024', '20072', '20092', '80003', '2000131', '2000137',  // Tempest Ogre
+            '10009',  // Frost Ogre
+            '10069',  // Phantom Arachnocrab
+            '10077',  // Venobzzar Incubator
+            '10081',  // Iron Fang
+            '10010',  // Tempest Ogre
             '10085',  // Lizardman King
-            '10029', '20027', '20071', '20108', '80005', '81000',  // Muku King
+            '10029',  // Muku King
         ],
         spawnType: SpawnType.HALF_HOUR,
     },
     {
         monsterIds: [
-            '10902', '10903',  // Lovely Boarlet/Breezy Boarlet
+            '10902', // Lovely Boarlet
+            '10903', // Breezy Boarlet
         ],
         spawnType: SpawnType.SPECIFIC_TIMES,
         specificTimes: ['10:00', '14:00', '18:00'], // UTC-2

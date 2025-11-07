@@ -12,32 +12,32 @@ export const MAGICAL_CREATURE_IDS = new Set([
 ]);
 
 export const BOSS_MONSTER_IDS = new Set([
-    // Golden Juggernaut
-    '80006', '10032',
+    // Storm Goblin King
+    '10007',
     // Frost Ogre
-    '108', '20100', '20127', '80002', '2000129', '2000140', '2004172', '3000006', '3000019',
+    '10009',
+    // Tempest Ogre
+    '10010',
     // Inferno Ogre
-    '80004', '10018',
-    // Phantom Arachnocrab
-    '80008', '10069',
+    '10018',
+    // Muku King
+    '10029',
+    // Golden Juggernaut
+    '10032',
     // Brigand Leader
     '10056',
-    // Lizardman King
-    '10085',
-    // Venobzzar Incubator
-    '80009', '10077',
     // Muku Chief
-    '80007', '10059',
+    '10059',
+    // Phantom Arachnocrab
+    '10069',
+    // Venobzzar Incubator
+    '10077',
     // Iron Fang
-    '8611', '80010', '10081',
-    // Goblin King
-    '8070', '10086', '20028', '20070', '20107', '7700001', '2000134', '2000138', '2004164', '2004169',
-    // Storm Goblin King
-    '80001', '10007', '61219', '61220', '61221',
-    // Tempest Ogre
-    '10010', '20024', '20072', '20092', '80003', '2000131', '2000137',
+    '10081',
     // Celestial Flier
     '10084',
-    // Muku King
-    '10029', '20027', '20071', '20108', '80005', '81000',
+    // Lizardman King
+    '10085',
+    // Goblin King
+    '10086',
 ]);

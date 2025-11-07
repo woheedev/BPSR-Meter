@@ -3,6 +3,15 @@ import "/css/style.css";
 import { useWindowControls } from "../shared/hooks";
 import { useTranslations } from "../shared/hooks/useTranslations";
 import { useSocket } from "../shared/hooks/useSocket";
+import { useWindowResize } from "../shared/hooks/useWindowResize";
+import ResizeHandle from "../shared/components/ResizeHandle";
+import {
+    KeybindInput,
+    Checkbox,
+    NumberInput,
+    RangeInput,
+    Description
+} from "../shared/components/settings";
 import * as storage from "../shared/utils/localStorage";
 
 const DEFAULT_KEYS = [
@@ -33,8 +42,15 @@ export default function SettingsApp(): React.JSX.Element {
     const [performanceMode, setPerformanceMode] = useState<boolean>(false);
     const [updateInterval, setUpdateInterval] = useState<number>(100);
     const [disableTransparency, setDisableTransparency] = useState<boolean>(false);
-    const [heightStep, setHeightStep] = useState<number>(20);
-    const [enableManualHeight, setEnableManualHeight] = useState<boolean>(false);
+    const [transparencyAmount, setTransparencyAmount] = useState<number>(70);
+    const [lockPosition, setLockPosition] = useState<boolean>(false);
+    const [lockKeybind, setLockKeybind] = useState<string>("CommandOrControl+L");
+    const [monstersKeybind, setMonstersKeybind] = useState<string>("CommandOrControl+M");
+    const [groupKeybind, setGroupKeybind] = useState<string>("CommandOrControl+G");
+    const [settingsKeybind, setSettingsKeybind] = useState<string>("CommandOrControl+S");
+    const [deviceKeybind, setDeviceKeybind] = useState<string>("CommandOrControl+D");
+    const [historyKeybind, setHistoryKeybind] = useState<string>("CommandOrControl+H");
+    const [isRecordingKeybind, setIsRecordingKeybind] = useState<string | null>(null);
     const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
 
     useSocket();
@@ -46,7 +62,8 @@ export default function SettingsApp(): React.JSX.Element {
         windowType: "settings",
     });
 
-    // Fetch settings from backend API
+    const { handleResizeStart } = useWindowResize("settings");
+
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -91,20 +108,45 @@ export default function SettingsApp(): React.JSX.Element {
                         setDisableTransparency(localValue !== null ? localValue : settings.disableTransparency);
                     }
 
-                    if (settings.hasOwnProperty("heightStep")) {
-                        const localValue = storage.getNumber("heightStep");
-                        setHeightStep(localValue !== null ? localValue : settings.heightStep);
-                    }
-
-                    if (settings.hasOwnProperty("enableManualHeight")) {
-                        const localValue = storage.getBoolean("enableManualHeight");
-                        setEnableManualHeight(localValue !== null ? localValue : settings.enableManualHeight);
+                    if (settings.hasOwnProperty("transparencyAmount")) {
+                        const localValue = storage.getNumber("transparencyAmount");
+                        setTransparencyAmount(localValue !== null ? localValue : settings.transparencyAmount);
                     }
                 }
             } catch (err) {
                 console.warn("Failed to fetch settings from API, using localStorage only", err);
             }
         };
+
+        const savedLockKeybind = storage.getItem("lockKeybind", "CommandOrControl+L");
+        if (savedLockKeybind) {
+            setLockKeybind(savedLockKeybind);
+        }
+
+        const savedMonstersKeybind = storage.getItem("monstersKeybind", "CommandOrControl+M");
+        if (savedMonstersKeybind) {
+            setMonstersKeybind(savedMonstersKeybind);
+        }
+
+        const savedGroupKeybind = storage.getItem("groupKeybind", "CommandOrControl+G");
+        if (savedGroupKeybind) {
+            setGroupKeybind(savedGroupKeybind);
+        }
+
+        const savedSettingsKeybind = storage.getItem("settingsKeybind", "CommandOrControl+S");
+        if (savedSettingsKeybind) {
+            setSettingsKeybind(savedSettingsKeybind);
+        }
+
+        const savedDeviceKeybind = storage.getItem("deviceKeybind", "CommandOrControl+D");
+        if (savedDeviceKeybind) {
+            setDeviceKeybind(savedDeviceKeybind);
+        }
+
+        const savedHistoryKeybind = storage.getItem("historyKeybind", "CommandOrControl+H");
+        if (savedHistoryKeybind) {
+            setHistoryKeybind(savedHistoryKeybind);
+        }
 
         fetchSettings();
     }, []);
@@ -120,9 +162,14 @@ export default function SettingsApp(): React.JSX.Element {
         const isDisabled = storage.getBoolean("disableTransparency", false);
         document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
 
+        // Apply transparency amount
+        const amount = storage.getNumber("transparencyAmount", 70);
+        const opacity = amount / 100;
+        document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
+
         // Setup transparency listener
         try {
-            const unsubscribe = window.electronAPI.onTransparencySettingChanged?.((isDisabled: boolean) => {
+            const unsubscribe = window.electron.onTransparencySettingChanged?.((isDisabled: boolean) => {
                 document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
                 setDisableTransparency(isDisabled);
             });
@@ -132,13 +179,38 @@ export default function SettingsApp(): React.JSX.Element {
         }
     }, []);
 
+    useEffect(() => {
+        try {
+            const unsubscribe = window.electron.onTransparencyAmountChanged?.((amount: number) => {
+                const opacity = amount / 100;
+                document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
+                setTransparencyAmount(amount);
+                storage.setItem("transparencyAmount", amount);
+            });
+            return unsubscribe;
+        } catch (err) {
+            console.warn("Failed to setup transparency amount listener", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            const unsubscribe = window.electron.onLockStateChanged?.((locked: boolean) => {
+                setLockPosition(locked);
+            });
+            return unsubscribe;
+        } catch (err) {
+            console.warn("Failed to setup lock state listener", err);
+        }
+    }, []);
+
     const toggle = (key: string) => {
         const next = { ...visibleColumns, [key]: !visibleColumns[key] };
         setVisibleColumns(next);
         storage.setJSON("visibleColumns", next);
 
         try {
-            window.electronAPI.updateVisibleColumns(next);
+            window.electron.updateVisibleColumns(next);
         } catch (err) {
             console.warn("Failed to notify main window of visibleColumns change", err);
         }
@@ -148,7 +220,7 @@ export default function SettingsApp(): React.JSX.Element {
         const newValue = !enableBPTimer;
         setEnableBPTimer(newValue);
         storage.setItem("enableBPTimerSubmission", newValue);
-        window.electronAPI.updateGlobalSettings({ enableBPTimerSubmission: newValue });
+        window.electron.updateGlobalSettings({ enableBPTimerSubmission: newValue });
     };
 
     const toggleAutoClearOnServerChange = () => {
@@ -156,14 +228,14 @@ export default function SettingsApp(): React.JSX.Element {
         setAutoClearOnServerChange(newValue);
         storage.setItem("autoClearOnServerChange", newValue);
 
-        window.electronAPI.updateGlobalSettings({ autoClearOnServerChange: newValue });
+        window.electron.updateGlobalSettings({ autoClearOnServerChange: newValue });
     };
 
     const toggleAutoClearOnTimeout = () => {
         const newValue = !autoClearOnTimeout;
         setAutoClearOnTimeout(newValue);
         storage.setItem("autoClearOnTimeout", newValue);
-        window.electronAPI.updateGlobalSettings({ autoClearOnTimeout: newValue });
+        window.electron.updateGlobalSettings({ autoClearOnTimeout: newValue });
     };
 
     const handleTimeoutSecondsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +243,7 @@ export default function SettingsApp(): React.JSX.Element {
         if (!isNaN(value) && value > 0 && value <= 300) {
             setAutoClearTimeoutSeconds(value);
             storage.setItem("autoClearTimeoutSeconds", value);
-            window.electronAPI.updateGlobalSettings({ autoClearTimeoutSeconds: value });
+            window.electron.updateGlobalSettings({ autoClearTimeoutSeconds: value });
         }
     };
 
@@ -193,7 +265,7 @@ export default function SettingsApp(): React.JSX.Element {
         storage.setItem("performanceMode", newValue);
         storage.setItem("updateIntervalMs", newInterval);
 
-        window.electronAPI.updateGlobalSettings({
+        window.electron.updateGlobalSettings({
             performanceMode: newValue,
             updateIntervalMs: newInterval
         });
@@ -204,7 +276,7 @@ export default function SettingsApp(): React.JSX.Element {
         if (!isNaN(value) && value >= 50 && value <= 1000) {
             setUpdateInterval(value);
             storage.setItem("updateIntervalMs", value);
-            window.electronAPI.updateGlobalSettings({ updateIntervalMs: value });
+            window.electron.updateGlobalSettings({ updateIntervalMs: value });
         }
     };
 
@@ -215,18 +287,95 @@ export default function SettingsApp(): React.JSX.Element {
         document.body.style.backgroundColor = newValue ? "#000" : "transparent";
 
         storage.setItem("disableTransparency", newValue);
-        window.electronAPI.updateGlobalSettings({ disableTransparency: newValue });
+        window.electron.updateGlobalSettings({ disableTransparency: newValue });
+    };
+
+    const handleTransparencyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(e.target.value, 10);
+        if (!isNaN(value) && value >= 0 && value <= 100) {
+            setTransparencyAmount(value);
+            storage.setItem("transparencyAmount", value);
+            window.electron.updateGlobalSettings({ transparencyAmount: value });
+
+            // Apply transparency to CSS variables
+            const opacity = value / 100;
+            document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
+        }
+    };
+
+    const toggleLockPosition = () => {
+        window.electron.toggleLockState();
+    };
+
+    const handleKeybindRecord = (type: string) => {
+        setIsRecordingKeybind(type);
+    };
+
+    const handleKeybindKeyDown = (e: React.KeyboardEvent) => {
+        if (!isRecordingKeybind) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const parts: string[] = [];
+
+        if (e.ctrlKey || e.metaKey) parts.push("CommandOrControl");
+        if (e.altKey) parts.push("Alt");
+        if (e.shiftKey) parts.push("Shift");
+
+        const key = e.key;
+        if (!["Control", "Meta", "Alt", "Shift"].includes(key)) {
+            parts.push(key.toUpperCase());
+        }
+
+        if (parts.length > 1) {
+            const keybind = parts.join("+");
+
+            switch (isRecordingKeybind) {
+                case "lock":
+                    setLockKeybind(keybind);
+                    storage.setItem("lockKeybind", keybind);
+                    window.electron.updateGlobalSettings({ lockKeybind: keybind });
+                    break;
+                case "monsters":
+                    setMonstersKeybind(keybind);
+                    storage.setItem("monstersKeybind", keybind);
+                    window.electron.updateGlobalSettings({ monstersKeybind: keybind });
+                    break;
+                case "group":
+                    setGroupKeybind(keybind);
+                    storage.setItem("groupKeybind", keybind);
+                    window.electron.updateGlobalSettings({ groupKeybind: keybind });
+                    break;
+                case "settings":
+                    setSettingsKeybind(keybind);
+                    storage.setItem("settingsKeybind", keybind);
+                    window.electron.updateGlobalSettings({ settingsKeybind: keybind });
+                    break;
+                case "device":
+                    setDeviceKeybind(keybind);
+                    storage.setItem("deviceKeybind", keybind);
+                    window.electron.updateGlobalSettings({ deviceKeybind: keybind });
+                    break;
+                case "history":
+                    setHistoryKeybind(keybind);
+                    storage.setItem("historyKeybind", keybind);
+                    window.electron.updateGlobalSettings({ historyKeybind: keybind });
+                    break;
+            }
+
+            setIsRecordingKeybind(null);
+        }
+    };
+
+    const handleKeybindBlur = () => {
+        setIsRecordingKeybind(null);
     };
 
     const handleCheckForUpdates = async () => {
-        if (!window.electronAPI?.checkForUpdatesWithDialog) {
-            alert("Update checker not available");
-            return;
-        }
-
         setCheckingUpdate(true);
         try {
-            const updateInfo = await window.electronAPI.checkForUpdatesWithDialog();
+            const updateInfo = await window.electron.checkForUpdatesWithDialog();
 
             if (!updateInfo.available && !updateInfo.error) {
                 alert(`You're running the latest version (${updateInfo.currentVersion})`);
@@ -243,6 +392,8 @@ export default function SettingsApp(): React.JSX.Element {
 
     return (
         <div className="settings-window p-4">
+            <ResizeHandle handleResizeStart={handleResizeStart} />
+
             <div className="settings-header">
                 <div className="drag-indicator pointer-events-auto" onMouseDown={handleDragStart} style={{ cursor: "move" }}>
                     <i className="fa-solid fa-grip-vertical"></i>
@@ -279,150 +430,166 @@ export default function SettingsApp(): React.JSX.Element {
 
                 <div className="settings-columns mt-4">
                     <h3 className="settings-section-title">{t("ui.settings.sections.bptimerIntegration")}</h3>
-                    <label className="column-item settings-row">
-                        <input
-                            type="checkbox"
-                            checked={enableBPTimer}
-                            onChange={toggleBPTimer}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.submitBossData")}</span>
-                    </label>
-                    <p className="settings-description">
+                    <Checkbox
+                        label={t("ui.settings.labels.submitBossData")}
+                        checked={enableBPTimer}
+                        onChange={toggleBPTimer}
+                    />
+                    <Description>
                         {t("ui.settings.descriptions.submitBossData")}
-                    </p>
+                    </Description>
                 </div>
 
                 <div className="settings-columns mt-4">
                     <h3 className="settings-section-title">{t("ui.settings.sections.generalOptions")}</h3>
-                    <label className="column-item settings-row">
-                        <input
-                            type="checkbox"
-                            checked={autoClearOnServerChange}
-                            onChange={toggleAutoClearOnServerChange}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.clearOnServerChange")}</span>
-                    </label>
-                    <p className="settings-description">
+                    <Checkbox
+                        label={t("ui.settings.labels.clearOnServerChange")}
+                        checked={autoClearOnServerChange}
+                        onChange={toggleAutoClearOnServerChange}
+                    />
+                    <Description>
                         {t("ui.settings.descriptions.clearOnServerChange")}
-                    </p>
-                    <label className="column-item settings-row">
-                        <input
-                            type="checkbox"
-                            checked={autoClearOnTimeout}
-                            onChange={toggleAutoClearOnTimeout}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.clearOnTimeout")}</span>
-                    </label>
-                    <p className="settings-description">
+                    </Description>
+                    <Checkbox
+                        label={t("ui.settings.labels.clearOnTimeout")}
+                        checked={autoClearOnTimeout}
+                        onChange={toggleAutoClearOnTimeout}
+                    />
+                    <Description>
                         {t("ui.settings.descriptions.clearOnTimeout")}
-                    </p>
+                    </Description>
                     {autoClearOnTimeout && (
-                        <div className="settings-input-row">
-                            <label className="settings-input-label">{t("ui.settings.labels.timeoutDuration")}</label>
-                            <input
-                                type="number"
-                                min="1"
-                                max="300"
-                                value={autoClearTimeoutSeconds}
-                                onChange={handleTimeoutSecondsChange}
-                                className="settings-number-input"
-                            />
-                        </div>
+                        <NumberInput
+                            label={t("ui.settings.labels.timeoutDuration")}
+                            min={1}
+                            max={300}
+                            value={autoClearTimeoutSeconds}
+                            onChange={handleTimeoutSecondsChange}
+                        />
                     )}
 
-                    <label className="column-item settings-row mt-2">
-                        <input
-                            type="checkbox"
-                            checked={disableTransparency}
-                            onChange={toggleDisableTransparency}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.disableTransparency")}</span>
-                    </label>
-                    <p className="settings-description">
+                    <Checkbox
+                        label={t("ui.settings.labels.disableTransparency")}
+                        checked={disableTransparency}
+                        onChange={toggleDisableTransparency}
+                        className="column-item settings-row mt-2"
+                    />
+                    <Description>
                         {t("ui.settings.descriptions.disableTransparency", "Disables transparent window background to reduce GPU load. Requires application restart to take effect. Recommended for best performance.")}
+                    </Description>
+
+                    {!disableTransparency && (
+                        <RangeInput
+                            label={t("ui.settings.labels.transparencyAmount", "Transparency Amount")}
+                            min={0}
+                            max={100}
+                            value={transparencyAmount}
+                            onChange={handleTransparencyAmountChange}
+                        />
+                    )}
+
+                    <Checkbox
+                        label={t("ui.settings.labels.lockPosition", "Lock Window Position")}
+                        checked={lockPosition}
+                        onChange={toggleLockPosition}
+                        className="column-item settings-row mt-2"
+                    />
+                    <Description>
+                        {t("ui.settings.descriptions.lockPosition", "Prevents all windows from being moved. Can also be toggled using the lock button on the main window.")}
+                    </Description>
+
+                    <KeybindInput
+                        label={t("ui.settings.labels.lockKeybind", "Lock Window Keybind")}
+                        value={lockKeybind}
+                        type="lock"
+                        isRecording={isRecordingKeybind === "lock"}
+                        onFocus={() => handleKeybindRecord("lock")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
+                    <p className="settings-description">
+                        {t("ui.settings.descriptions.lockKeybind", "Click the input field and press your desired key combination. Works globally even when the app is not focused.")}
                     </p>
 
-                    <label className="column-item settings-row">
-                        <input
-                            type="checkbox"
-                            checked={enableManualHeight}
-                            onChange={(e) => {
-                                const checked = e.target.checked;
-                                setEnableManualHeight(checked);
-                                storage.setItem("enableManualHeight", checked);
-                                window.electronAPI.updateGlobalSettings?.({ enableManualHeight: checked });
-                            }}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.enableManualHeight", "Enable manual height adjustment")}</span>
-                    </label>
-                    <p className="settings-description">
-                        {t("ui.settings.descriptions.enableManualHeight")}
-                    </p>
-                    {enableManualHeight && (
-                        <>
-                            <div className="settings-input-row mt-2">
-                                <label className="settings-input-label">{t("ui.settings.labels.heightAdjustmentStep")}</label>
-                                <input
-                                    type="number"
-                                    min="10"
-                                    max="200"
-                                    step="10"
-                                    value={heightStep}
-                                    disabled={!enableManualHeight}
-                                    onChange={(e) => {
-                                        const value = parseInt(e.target.value, 10);
-                                        if (!isNaN(value) && value > 0) {
-                                            setHeightStep(value);
-                                            storage.setItem("heightStep", value);
-                                            window.electronAPI.updateGlobalSettings?.({ heightStep: value });
-                                        }
-                                    }}
-                                    className="settings-number-input"
-                                />
-                            </div>
-                            <p className="settings-description">
-                                {t("ui.settings.descriptions.heightAdjustmentStep")}
-                            </p>
-                        </>
-                    )}
+                    <KeybindInput
+                        label={t("ui.settings.labels.monstersKeybind", "Monsters Window Keybind")}
+                        value={monstersKeybind}
+                        type="monsters"
+                        isRecording={isRecordingKeybind === "monsters"}
+                        onFocus={() => handleKeybindRecord("monsters")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
+
+                    <KeybindInput
+                        label={t("ui.settings.labels.groupKeybind", "Group Window Keybind")}
+                        value={groupKeybind}
+                        type="group"
+                        isRecording={isRecordingKeybind === "group"}
+                        onFocus={() => handleKeybindRecord("group")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
+
+                    <KeybindInput
+                        label={t("ui.settings.labels.settingsKeybind", "Settings Window Keybind")}
+                        value={settingsKeybind}
+                        type="settings"
+                        isRecording={isRecordingKeybind === "settings"}
+                        onFocus={() => handleKeybindRecord("settings")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
+
+                    <KeybindInput
+                        label={t("ui.settings.labels.deviceKeybind", "Device Window Keybind")}
+                        value={deviceKeybind}
+                        type="device"
+                        isRecording={isRecordingKeybind === "device"}
+                        onFocus={() => handleKeybindRecord("device")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
+
+                    <KeybindInput
+                        label={t("ui.settings.labels.historyKeybind", "History Window Keybind")}
+                        value={historyKeybind}
+                        type="history"
+                        isRecording={isRecordingKeybind === "history"}
+                        onFocus={() => handleKeybindRecord("history")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t("ui.settings.placeholders.pressKeys", "Press keys...")}
+                    />
                 </div>
 
                 <div className="settings-columns mt-4">
                     <h3 className="settings-section-title">{t("ui.settings.sections.performanceOptions")}</h3>
-                    <label className="column-item settings-row">
-                        <input
-                            type="checkbox"
-                            checked={performanceMode}
-                            onChange={togglePerformanceMode}
-                        />
-                        <span className="fake-checkbox" aria-hidden></span>
-                        <span className="column-label">{t("ui.settings.labels.performanceMode")}</span>
-                    </label>
-                    <p className="settings-description">
+                    <Checkbox
+                        label={t("ui.settings.labels.performanceMode")}
+                        checked={performanceMode}
+                        onChange={togglePerformanceMode}
+                    />
+                    <Description>
                         {t("ui.settings.descriptions.performanceMode")}
-                    </p>
+                    </Description>
                     {!performanceMode && (
                         <>
-                            <div className="settings-input-row">
-                                <label className="settings-input-label">{t("ui.settings.labels.updateInterval")}</label>
-                                <input
-                                    type="number"
-                                    min="50"
-                                    max="1000"
-                                    step="50"
-                                    value={updateInterval}
-                                    onChange={handleUpdateIntervalChange}
-                                    className="settings-number-input"
-                                />
-                            </div>
-                            <p className="settings-description">
+                            <NumberInput
+                                label={t("ui.settings.labels.updateInterval")}
+                                min={50}
+                                max={1000}
+                                value={updateInterval}
+                                onChange={handleUpdateIntervalChange}
+                            />
+                            <Description>
                                 {t("ui.settings.descriptions.updateInterval")}
-                            </p>
+                            </Description>
                         </>
                     )}
                 </div>

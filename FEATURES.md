@@ -242,14 +242,24 @@ Control which statistics are displayed in the main DPS meter window.
 
 ---
 
+#### Transparency Amount
+**What it does**: Adjusts the transparency level of all application windows from 0% (fully transparent) to 100% (fully opaque).
+
+**Default**: 70%
+
+**Note**: For absolute best performance, disable transparency entirely using the "Disable window transparency" option below instead of using the slider.
+
+---
+
 #### Disable window transparency
-**What it does**: Removes the transparent window background, using a solid black background instead.
+**What it does**: Removes the transparent window background completely, using a solid black background instead.
 
 **Impact**:
 - Significantly reduces GPU load
 - Best performance improvement option
 - Requires application restart to take full effect
 - Less visually integrated with game UI
+- Overrides the transparency slider when enabled
 
 **When to enable**:
 - If you have performance issues
@@ -258,7 +268,7 @@ Control which statistics are displayed in the main DPS meter window.
 
 **Default**: Disabled
 
-**Recommendation**: Enable this if you want the absolute best performance. This is the single most effective performance setting.
+**Recommendation**: Enable this if you want the absolute best performance. This is the single most effective performance setting. If you just want to adjust transparency, use the slider above instead.
 
 ---
 
@@ -289,7 +299,7 @@ Control which statistics are displayed in the main DPS meter window.
 
 ### Window Controls
 
-All windows (Main, Settings, Group, History, Monsters) have these controls:
+All windows (Main, Settings, Group, History, Monsters, Device) have these controls:
 
 | Button | Function |
 |--------|----------|
@@ -300,6 +310,69 @@ All windows (Main, Settings, Group, History, Monsters) have these controls:
 | **Increase Height** | Increase window height (hold to repeat) - Main only |
 | **Decrease Height** | Decrease window height (hold to repeat) - Main only |
 | **Close** | Close the window |
+
+### Window Transparency
+
+**Location**: Settings Window → Performance Options → Transparency Amount
+
+Control the transparency level of all application windows.
+
+**Performance note**: For best performance, use "Disable window transparency" instead of this slider.
+
+---
+
+### Window Position Lock
+
+**Location**: Settings Window → Window Options → Lock Window Position
+
+Prevent all windows from being moved accidentally.
+
+**Features**:
+- **Checkbox**: Toggle lock state for all windows
+- **Lock button**: Quick toggle available on main window control bar
+- **Synchronized**: Lock button and checkbox stay in sync
+- **Global effect**: Locks all windows simultaneously
+
+---
+
+### Global Keybinds
+
+**Location**: Settings Window → Window Options → Keybind Settings
+
+Configure global keyboard shortcuts that work even when the application is not focused.
+
+**Available Keybinds**:
+
+| Keybind | Default | Function |
+|---------|---------|----------|
+| **Lock Window Keybind** | Ctrl+L | Toggle lock position for all windows |
+| **Monsters Window Keybind** | Ctrl+M | Toggle Monsters window (open/close) |
+| **Group Window Keybind** | Ctrl+G | Toggle Group window (open/close) |
+| **Settings Window Keybind** | Ctrl+S | Toggle Settings window (open/close) |
+| **Device Window Keybind** | Ctrl+D | Toggle Device window (open/close) |
+| **History Window Keybind** | Ctrl+H | Toggle History window (open/close) |
+
+**How to customize keybinds**:
+1. Open Settings window
+2. Navigate to Window Options section
+3. Click on the keybind input field you want to change
+4. The field will highlight blue and show "Press keys..."
+5. Press your desired key combination (must include a modifier like Ctrl, Alt, or Shift)
+6. The new keybind is saved automatically
+7. IF you want to change it again you have to click out of the input field and then back in.
+
+**Modifier requirements**:
+- Must include at least one modifier key (Ctrl/Cmd, Alt, or Shift)
+- Can combine multiple modifiers (e.g., Ctrl+Shift+M)
+- Main key is automatically capitalized
+
+**Examples**:
+- `Ctrl+M` - Toggle Monsters window
+- `Alt+H` - Toggle History window
+- `Shift+G` - Toggle Group window
+- `Ctrl+Shift+S` - Toggle Settings window
+
+---
 
 ### Height Adjustment
 

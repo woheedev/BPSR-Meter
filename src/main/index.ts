@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, IpcMainEvent, IpcMainInvokeEvent, screen } from "electron";
+import { app, BrowserWindow, ipcMain, IpcMainEvent, IpcMainInvokeEvent, screen, globalShortcut } from "electron";
 import { checkForUpdates, checkForUpdatesSilent, showUpdateDialog } from "./updateChecker";
 import path from "path";
 import { exec, fork, ChildProcess } from "child_process";
@@ -11,12 +11,12 @@ import fs from "fs";
  */
 
 const WINDOW_CONFIGS = {
-    main: { defaultSize: { width: 650, height: 700 }, minSize: { width: 650, height: 700 }, resizable: true },
-    group: { defaultSize: { width: 480, height: 530 }, minSize: { width: 400, height: 450 }, resizable: true },
-    history: { defaultSize: { width: 800, height: 600 }, minSize: { width: 800, height: 600 }, resizable: true },
-    device: { defaultSize: { width: 600, height: 400 }, minSize: { width: 400, height: 300 }, resizable: true },
-    settings: { defaultSize: { width: 420, height: 520 }, minSize: { width: 360, height: 420 }, resizable: true },
-    monsters: { defaultSize: { width: 480, height: 600 }, minSize: { width: 360, height: 300 }, resizable: true }
+    main: { defaultSize: { width: 950, height: 480 }, resizable: true },
+    group: { defaultSize: { width: 480, height: 680 }, resizable: true },
+    history: { defaultSize: { width: 950, height: 600 }, resizable: true },
+    device: { defaultSize: { width: 600, height: 400 }, resizable: true },
+    settings: { defaultSize: { width: 420, height: 520 }, resizable: true },
+    monsters: { defaultSize: { width: 950, height: 600 }, resizable: true }
 } as const;
 
 type WindowType = keyof typeof WINDOW_CONFIGS;
@@ -27,12 +27,12 @@ const windows: Record<WindowType, BrowserWindow | null> = {
 };
 
 const lastWindowSizes: Record<WindowType, WindowSize> = {
-    main: { width: 650, height: 700, scale: 1 },
-    group: { width: 480, height: 530, scale: 1 },
-    history: { width: 800, height: 600, scale: 1 },
+    main: { width: 950, height: 480, scale: 1 },
+    group: { width: 480, height: 680, scale: 1 },
+    history: { width: 950, height: 600, scale: 1 },
     device: { width: 600, height: 400, scale: 1 },
     settings: { width: 420, height: 520, scale: 1 },
-    monsters: { width: 480, height: 600, scale: 1 }
+    monsters: { width: 950, height: 600, scale: 1 }
 };
 
 let serverProcess: ChildProcess | null = null;
@@ -107,13 +107,18 @@ async function loadWindowSizes(): Promise<Record<WindowType, WindowSize>> {
             return settings.windowSizes;
         }
     } catch {
-        logToFile("No saved window sizes found, using defaults");
     }
+    return lastWindowSizes;
 }
 
 async function saveWindowSize(windowType: WindowType, width: number, height: number, scale?: number): Promise<void> {
     try {
-        lastWindowSizes[windowType] = { width, height, ...(scale && { scale }) };
+        lastWindowSizes[windowType] = {
+            ...lastWindowSizes[windowType],
+            ...(width !== undefined && { width }),
+            ...(height !== undefined && { height }),
+            ...(scale !== undefined && { scale })
+        };
 
         let settings: any = {};
         try {
@@ -192,8 +197,6 @@ function createWindowConfig(windowType: WindowType, savedSizes: Record<WindowTyp
     return {
         width: size.width,
         height: size.height,
-        minWidth: config.minSize.width,
-        minHeight: config.minSize.height,
         transparent: shouldUseTransparency,
         frame: false,
         alwaysOnTop: true,
@@ -226,6 +229,10 @@ function setupWindowEvents(window: BrowserWindow, windowType: WindowType) {
 
     window.on("focus", () => {
         window.webContents.send("window-focused");
+    });
+
+    window.on("blur", () => {
+        window.webContents.send("window-blurred");
     });
 
     window.on("closed", () => {
@@ -270,33 +277,22 @@ function setupIpcHandlers() {
     });
 
     ipcMain.handle("get-window-position", (event: IpcMainInvokeEvent) => {
-        const [x, y] = BrowserWindow.fromWebContents(event.sender)?.getPosition() || [0, 0];
-        return { x, y };
+        const window = BrowserWindow.fromWebContents(event.sender);
+        const [x, y] = window.getPosition();
+        const bounds = window.getBounds();
+        return { x, y, width: bounds.width, height: bounds.height };
     });
 
     ipcMain.on("toggle-lock-state", () => {
-        if (windows.main) {
-            isLocked = !isLocked;
-            windows.main.setMovable(!isLocked);
-            windows.main.webContents.send("lock-state-changed", isLocked);
-        }
-    });
+        isLocked = !isLocked;
 
-    ipcMain.on("resize-window-to-content", (event: IpcMainEvent, windowType: WindowType, width: number, height: number, scale: number) => {
-        const senderWindow = BrowserWindow.fromWebContents(event.sender);
-        if (!senderWindow) return;
-
-        const targetWidth = Math.min(width, width);
-        const targetHeight = Math.min(height, height);
-        senderWindow.setContentSize(targetWidth, targetHeight, false);
-        senderWindow.setBounds({ width: targetWidth, height: targetHeight }, false);
-
-        setTimeout(() => {
-            const bounds = senderWindow.getBounds();
-            if (windowType in lastWindowSizes) {
-                lastWindowSizes[windowType] = { width: bounds.width, height: bounds.height, scale };
+        // Apply lock state to all windows
+        Object.values(windows).forEach((window) => {
+            if (window) {
+                window.setMovable(!isLocked);
+                window.webContents.send("lock-state-changed", isLocked);
             }
-        }, 10);
+        });
     });
 
     ipcMain.on("save-window-size", (_event: IpcMainEvent, windowType: WindowType, width: number, height: number, scale?: number) => {
@@ -305,46 +301,11 @@ function setupIpcHandlers() {
 
     ipcMain.handle("get-saved-window-sizes", loadWindowSizes);
 
-    ipcMain.on("open-group-window", () => createOrFocusWindow("group"));
-    ipcMain.on("open-history-window", () => createOrFocusWindow("history"));
-    ipcMain.on("open-device-window", () => createOrFocusWindow("device"));
-    ipcMain.on("open-settings-window", () => createOrFocusWindow("settings"));
-    ipcMain.on("open-monsters-window", () => createOrFocusWindow("monsters"));
-
-    ipcMain.on("increase-window-height", (event: IpcMainEvent, windowType: WindowType, step: number = 20) => {
-        const senderWindow = BrowserWindow.fromWebContents(event.sender);
-        if (!senderWindow) return;
-
-        const bounds = senderWindow.getBounds();
-        const newHeight = bounds.height + step;
-        senderWindow.setContentSize(bounds.width, newHeight, false);
-        senderWindow.setBounds({ width: bounds.width, height: newHeight }, false);
-
-        if (windowType in lastWindowSizes) {
-            const scale = lastWindowSizes[windowType].scale || 1;
-            lastWindowSizes[windowType] = { width: bounds.width, height: newHeight, scale };
-            saveWindowSize(windowType, bounds.width, newHeight, scale);
-        }
-    });
-
-    ipcMain.on("decrease-window-height", (event: IpcMainEvent, windowType: WindowType, step: number = 20) => {
-        const senderWindow = BrowserWindow.fromWebContents(event.sender);
-        if (!senderWindow) return;
-
-        const bounds = senderWindow.getBounds();
-        const config = WINDOW_CONFIGS[windowType];
-        const minHeight = config?.minSize.height || 300;
-        const newHeight = Math.max(minHeight, bounds.height - step);
-        
-        senderWindow.setContentSize(bounds.width, newHeight, false);
-        senderWindow.setBounds({ width: bounds.width, height: newHeight }, false);
-
-        if (windowType in lastWindowSizes) {
-            const scale = lastWindowSizes[windowType].scale || 1;
-            lastWindowSizes[windowType] = { width: bounds.width, height: newHeight, scale };
-            saveWindowSize(windowType, bounds.width, newHeight, scale);
-        }
-    });
+    ipcMain.on("open-group-window", () => createOrFocusWindow("group").catch(err => logToFile(`Error opening group window: ${err}`)));
+    ipcMain.on("open-history-window", () => createOrFocusWindow("history").catch(err => logToFile(`Error opening history window: ${err}`)));
+    ipcMain.on("open-device-window", () => createOrFocusWindow("device").catch(err => logToFile(`Error opening device window: ${err}`)));
+    ipcMain.on("open-settings-window", () => createOrFocusWindow("settings").catch(err => logToFile(`Error opening settings window: ${err}`)));
+    ipcMain.on("open-monsters-window", () => createOrFocusWindow("monsters").catch(err => logToFile(`Error opening monsters window: ${err}`)));
 
     ipcMain.on("update-visible-columns", (_event: IpcMainEvent, cols: Record<string, boolean>) => {
         if (windows.main && !windows.main.isDestroyed()) {
@@ -371,16 +332,119 @@ function setupIpcHandlers() {
                 });
             }
 
-            if (settings.hasOwnProperty("heightStep")) {
-                if (windows.main && !windows.main.isDestroyed()) {
-                    windows.main.webContents.send("height-step-changed", settings.heightStep);
-                }
+            if (settings.hasOwnProperty("transparencyAmount")) {
+                Object.values(windows).forEach((window) => {
+                    if (window && !window.isDestroyed()) {
+                        window.webContents.send("transparency-amount-changed", settings.transparencyAmount);
+                    }
+                });
             }
 
-            if (settings.hasOwnProperty("enableManualHeight")) {
-                if (windows.main && !windows.main.isDestroyed()) {
-                    windows.main.webContents.send("manual-height-changed", settings.enableManualHeight);
-                }
+            if (settings.hasOwnProperty("clickthroughEnabled")) {
+                Object.values(windows).forEach((window) => {
+                    if (window && !window.isDestroyed()) {
+                        window.webContents.send("clickthrough-changed", settings.clickthroughEnabled);
+                    }
+                });
+            }
+
+            if (settings.hasOwnProperty("lockKeybind")) {
+                globalShortcut.unregisterAll();
+
+                const currentKeybinds = {
+                    lockKeybind: settings.lockKeybind || "CommandOrControl+L",
+                    monstersKeybind: currentSettings.monstersKeybind || "CommandOrControl+M",
+                    groupKeybind: currentSettings.groupKeybind || "CommandOrControl+G",
+                    settingsKeybind: currentSettings.settingsKeybind || "CommandOrControl+S",
+                    deviceKeybind: currentSettings.deviceKeybind || "CommandOrControl+D",
+                    historyKeybind: currentSettings.historyKeybind || "CommandOrControl+H"
+                };
+
+                // Register lock keybind
+                const ret = globalShortcut.register(currentKeybinds.lockKeybind, () => {
+                    isLocked = !isLocked;
+
+                    Object.values(windows).forEach((window) => {
+                        if (window) {
+                            window.setMovable(!isLocked);
+                            window.webContents.send("lock-state-changed", isLocked);
+                        }
+                    });
+                });
+
+                // Helper function to toggle window
+                const toggleWindow = (windowType: WindowType) => {
+                    const window = windows[windowType];
+                    if (window && !window.isDestroyed()) {
+                        if (window.isVisible()) {
+                            window.close();
+                        } else {
+                            window.show();
+                            window.focus();
+                        }
+                    } else {
+                        createOrFocusWindow(windowType).catch(err =>
+                            logToFile(`Error opening ${windowType} window: ${err}`)
+                        );
+                    }
+                };
+
+                globalShortcut.register(currentKeybinds.monstersKeybind, () => toggleWindow("monsters"));
+                globalShortcut.register(currentKeybinds.groupKeybind, () => toggleWindow("group"));
+                globalShortcut.register(currentKeybinds.settingsKeybind, () => toggleWindow("settings"));
+                globalShortcut.register(currentKeybinds.deviceKeybind, () => toggleWindow("device"));
+                globalShortcut.register(currentKeybinds.historyKeybind, () => toggleWindow("history"));
+            }
+
+            if (settings.hasOwnProperty("monstersKeybind") || settings.hasOwnProperty("groupKeybind") ||
+                settings.hasOwnProperty("settingsKeybind") || settings.hasOwnProperty("deviceKeybind") ||
+                settings.hasOwnProperty("historyKeybind")) {
+
+                globalShortcut.unregisterAll();
+
+                const currentKeybinds = {
+                    lockKeybind: currentSettings.lockKeybind || "CommandOrControl+L",
+                    monstersKeybind: currentSettings.monstersKeybind || "CommandOrControl+M",
+                    groupKeybind: currentSettings.groupKeybind || "CommandOrControl+G",
+                    settingsKeybind: currentSettings.settingsKeybind || "CommandOrControl+S",
+                    deviceKeybind: currentSettings.deviceKeybind || "CommandOrControl+D",
+                    historyKeybind: currentSettings.historyKeybind || "CommandOrControl+H"
+                };
+
+                // Register lock keybind
+                globalShortcut.register(currentKeybinds.lockKeybind, () => {
+                    isLocked = !isLocked;
+
+                    Object.values(windows).forEach((window) => {
+                        if (window) {
+                            window.setMovable(!isLocked);
+                            window.webContents.send("lock-state-changed", isLocked);
+                        }
+                    });
+                });
+
+                const toggleWindow = (windowType: WindowType) => {
+                    const window = windows[windowType];
+                    if (window && !window.isDestroyed()) {
+                        if (window.isVisible()) {
+                            window.close();
+                        } else {
+                            window.show();
+                            window.focus();
+                        }
+                    } else {
+                        createOrFocusWindow(windowType).catch(err =>
+                            logToFile(`Error opening ${windowType} window: ${err}`)
+                        );
+                    }
+                };
+
+                // Register window toggle keybinds
+                globalShortcut.register(currentKeybinds.monstersKeybind, () => toggleWindow("monsters"));
+                globalShortcut.register(currentKeybinds.groupKeybind, () => toggleWindow("group"));
+                globalShortcut.register(currentKeybinds.settingsKeybind, () => toggleWindow("settings"));
+                globalShortcut.register(currentKeybinds.deviceKeybind, () => toggleWindow("device"));
+                globalShortcut.register(currentKeybinds.historyKeybind, () => toggleWindow("history"));
             }
         } catch (error) {
             logToFile(`Error updating global settings: ${error}`);
@@ -412,17 +476,9 @@ function setupIpcHandlers() {
         }
     });
 
-    ipcMain.on("set-window-position", (event: IpcMainEvent, x: number, y: number) => {
+    ipcMain.on("set-window-position", (event: IpcMainEvent, windowType: WindowType, x: number, y: number) => {
         const senderWindow = BrowserWindow.fromWebContents(event.sender);
         if (!senderWindow) return;
-
-        let windowType: WindowType | null = null;
-        for (const [type, win] of Object.entries(windows)) {
-            if (win === senderWindow) {
-                windowType = type as WindowType;
-                break;
-            }
-        }
 
         const bounds = senderWindow.getBounds();
         const windowWidth = windowType ? lastWindowSizes[windowType].width : bounds.width;
@@ -450,6 +506,20 @@ function setupIpcHandlers() {
         }
     });
 
+    ipcMain.on("resize-window", (event: IpcMainEvent, windowType: WindowType, width: number, height: number) => {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        if (!senderWindow) return;
+
+        const bounds = senderWindow.getBounds();
+
+        senderWindow.setBounds({
+            x: bounds.x,
+            y: bounds.y,
+            width: Math.max(width, 400),
+            height: Math.max(height, 300)
+        }, false);
+    });
+
     // Update checker handlers
     ipcMain.handle("check-for-updates", async () => {
         const currentVersion = app.getVersion();
@@ -459,11 +529,11 @@ function setupIpcHandlers() {
     ipcMain.handle("check-for-updates-with-dialog", async () => {
         const currentVersion = app.getVersion();
         const updateInfo = await checkForUpdates(currentVersion);
-        
+
         if (updateInfo.available) {
             await showUpdateDialog(updateInfo);
         }
-        
+
         return updateInfo;
     });
 }
@@ -561,6 +631,87 @@ async function createMainWindow(): Promise<void> {
 
 app.whenReady().then(() => {
     electronApp.setAppUserModelId("com.electron");
+
+    // Load saved keybinds or use defaults
+    let savedLockKeybind = "CommandOrControl+L";
+    let savedMonstersKeybind = "CommandOrControl+M";
+    let savedGroupKeybind = "CommandOrControl+G";
+    let savedSettingsKeybind = "CommandOrControl+S";
+    let savedDeviceKeybind = "CommandOrControl+D";
+    let savedHistoryKeybind = "CommandOrControl+H";
+
+    try {
+        if (fs.existsSync(settingsPath)) {
+            const data = fs.readFileSync(settingsPath, "utf8");
+            const settings = JSON.parse(data);
+            if (settings.lockKeybind) savedLockKeybind = settings.lockKeybind;
+            if (settings.monstersKeybind) savedMonstersKeybind = settings.monstersKeybind;
+            if (settings.groupKeybind) savedGroupKeybind = settings.groupKeybind;
+            if (settings.settingsKeybind) savedSettingsKeybind = settings.settingsKeybind;
+            if (settings.deviceKeybind) savedDeviceKeybind = settings.deviceKeybind;
+            if (settings.historyKeybind) savedHistoryKeybind = settings.historyKeybind;
+        }
+    } catch (error) {
+        logToFile(`Error reading saved keybinds: ${error}`);
+    }
+
+    // Helper function to toggle window
+    const toggleWindow = (windowType: WindowType) => {
+        const window = windows[windowType];
+        if (window && !window.isDestroyed()) {
+            if (window.isVisible()) {
+                window.close();
+            } else {
+                window.show();
+                window.focus();
+            }
+        } else {
+            createOrFocusWindow(windowType).catch(err =>
+                logToFile(`Error opening ${windowType} window: ${err}`)
+            );
+        }
+    };
+
+    const lockRet = globalShortcut.register(savedLockKeybind, () => {
+        isLocked = !isLocked;
+
+        Object.values(windows).forEach((window) => {
+            if (window) {
+                window.setMovable(!isLocked);
+                window.webContents.send("lock-state-changed", isLocked);
+            }
+        });
+    });
+
+    if (!lockRet) {
+        logToFile('Global shortcut registration failed for lock keybind');
+    }
+
+    const monstersRet = globalShortcut.register(savedMonstersKeybind, () => toggleWindow("monsters"));
+    if (!monstersRet) {
+        logToFile(`Failed to register monsters keybind: ${savedMonstersKeybind}`);
+    }
+
+    const groupRet = globalShortcut.register(savedGroupKeybind, () => toggleWindow("group"));
+    if (!groupRet) {
+        logToFile(`Failed to register group keybind: ${savedGroupKeybind}`);
+    }
+
+    const settingsRet = globalShortcut.register(savedSettingsKeybind, () => toggleWindow("settings"));
+    if (!settingsRet) {
+        logToFile(`Failed to register settings keybind: ${savedSettingsKeybind}`);
+    }
+
+    const deviceRet = globalShortcut.register(savedDeviceKeybind, () => toggleWindow("device"));
+    if (!deviceRet) {
+        logToFile(`Failed to register device keybind: ${savedDeviceKeybind}`);
+    }
+
+    const historyRet = globalShortcut.register(savedHistoryKeybind, () => toggleWindow("history"));
+    if (!historyRet) {
+        logToFile(`Failed to register history keybind: ${savedHistoryKeybind}`);
+    }
+
     createMainWindow();
 
     setTimeout(() => {
@@ -580,5 +731,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+    globalShortcut.unregisterAll();
     logToFile("App closing, cleaning up...");
 });

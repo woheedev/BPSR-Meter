@@ -92,18 +92,18 @@ export interface UpdateInfo {
     error?: string;
 }
 
+type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+
 export interface ElectronAPI {
     closeWindow: () => void;
     toggleLockState: () => void;
     onLockStateChanged: (callback: (isLocked: boolean) => void) => void;
     setIgnoreMouseEvents: (ignore: boolean, options?: any) => void;
     getWindowPosition: () => Promise<[number, number]>;
-    setWindowPosition: (x: number, y: number) => void;
-    resizeWindowToContent: (width: number, height: number, scale: number) => void;
+    setWindowPosition: (windowType: WindowType, x: number, y: number) => void;
+    resizeWindow: (windowType: WindowType, width: number, height: number) => void;
     openGroupWindow: () => void;
     openHistoryWindow: () => void;
-    increaseWindowHeight: (windowType: string, step?: number) => void;
-    decreaseWindowHeight: (windowType: string, step?: number) => void;
     onWindowShown?: (callback: () => void) => void;
     checkForUpdates: () => Promise<UpdateInfo>;
     checkForUpdatesWithDialog: () => Promise<UpdateInfo>;
@@ -112,6 +112,6 @@ export interface ElectronAPI {
 // Extend Window interface
 declare global {
     interface Window {
-        electronAPI?: ElectronAPI;
+        electron?: ElectronAPI;
     }
 }

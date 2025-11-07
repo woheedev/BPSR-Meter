@@ -1,6 +1,6 @@
 {
     "name": "bpsr-meter",
-    "version": "0.3.91",
+    "version": "0.4.0",
     "description": "BPSR Meter",
     "author": "Denoder",
     "type": "module",

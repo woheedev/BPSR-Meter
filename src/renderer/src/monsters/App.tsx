@@ -3,6 +3,8 @@ import type { ApiResponse } from "../shared/types";
 import { translateForLang } from "../shared/utils/translations";
 import { useTranslations } from "../shared/hooks/useTranslations";
 import { useWindowControls, useSocket } from "../shared/hooks";
+import { useWindowResize } from "../shared/hooks/useWindowResize";
+import ResizeHandle from "../shared/components/ResizeHandle";
 import MonstersHeader from "./MonstersHeader";
 import MonsterList from "./MonsterList";
 import BossSchedule from "./BossSchedule";
@@ -36,11 +38,13 @@ export default function MonstersApp(): React.JSX.Element {
     const [activeTab, setActiveTab] = useState<"monsters" | "schedule">("monsters");
     const previousMonstersRef = useRef<Record<string, MonsterEntry>>({});
 
-    const { scale, zoomIn, zoomOut, handleDragStart, handleClose, isDragging } = useWindowControls({
-        baseWidth: 560,
-        baseHeight: 420,
+    const { zoomIn, zoomOut, handleDragStart, handleClose } = useWindowControls({
+        baseWidth: 950,
+        baseHeight: 600,
         windowType: "monsters",
     });
+
+    const { handleResizeStart } = useWindowResize('monsters');
 
     const { t, currentLanguage } = useTranslations();
     const { on } = useSocket();
@@ -49,17 +53,58 @@ export default function MonstersApp(): React.JSX.Element {
         try {
             const disableTransparency = localStorage.getItem("disableTransparency") === "true";
             document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
+
+            const transparencyAmount = localStorage.getItem("transparencyAmount");
+            const amount = transparencyAmount ? parseInt(transparencyAmount, 10) : 70;
+            const opacity = amount / 100;
+            document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
         } catch (err) {
             console.warn("Failed to apply transparency setting", err);
         }
 
         try {
-            const listener = window.electronAPI.onTransparencySettingChanged?.((isDisabled: boolean) => {
+            const listener = window.electron.onTransparencySettingChanged?.((isDisabled: boolean) => {
                 document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
             });
             return listener;
         } catch (err) {
             console.warn("Failed to setup transparency listener", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            const unsubscribe = window.electron.onTransparencyAmountChanged?.((amount: number) => {
+                const opacity = amount / 100;
+                document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
+                localStorage.setItem("transparencyAmount", amount.toString());
+            });
+            return unsubscribe;
+        } catch (err) {
+            console.warn("Failed to setup transparency amount listener", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            const clickthroughEnabled = localStorage.getItem("clickthroughEnabled") === "true";
+            if (clickthroughEnabled && window.electron?.setIgnoreMouseEvents) {
+                window.electron.setIgnoreMouseEvents(true, { forward: true });
+            }
+        } catch (err) {
+            console.warn("Failed to apply clickthrough setting", err);
+        }
+
+        try {
+            const unsubscribe = window.electron.onClickthroughChanged?.((enabled: boolean) => {
+                if (window.electron?.setIgnoreMouseEvents) {
+                    window.electron.setIgnoreMouseEvents(enabled, { forward: true });
+                }
+                localStorage.setItem("clickthroughEnabled", enabled.toString());
+            });
+            return unsubscribe;
+        } catch (err) {
+            console.warn("Failed to setup clickthrough listener", err);
         }
     }, []);
 
@@ -124,7 +169,7 @@ export default function MonstersApp(): React.JSX.Element {
                     for (const [uid, monster] of Object.entries(filtered)) {
                         const previousMonster = previousMonsters[uid];
                         const monsterId = monster.monster_id?.toString();
-                        
+
                         if (monsterId) {
                             if (monster.hp && monster.hp > 0) {
                                 if (!previousMonster || previousMonster.hp === 0 || previousMonster.hp === null) {
@@ -138,7 +183,7 @@ export default function MonstersApp(): React.JSX.Element {
                     }
 
                     previousMonstersRef.current = filtered;
-                    
+
                     setMonsters(filtered);
 
                     // Load missing translations
@@ -180,37 +225,10 @@ export default function MonstersApp(): React.JSX.Element {
         };
     }, [on]);
 
-    useEffect(() => {
-        let debounceTimer: number | null = null;
-
-        const resizeIfNeeded = (width: number, height: number) => {
-            if (!isDragging) {
-                window.electronAPI.resizeWindowToContent("monsters", width, height, scale);
-            }
-        };
-
-        const observer = new ResizeObserver((entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            const cr = entry.target.getBoundingClientRect();
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            debounceTimer = window.setTimeout(() => {
-                resizeIfNeeded(Math.ceil(cr.width), Math.ceil(cr.height));
-                debounceTimer = null;
-            }, 80);
-        });
-
-        const el = document.querySelector(".monsters-window");
-        if (el) observer.observe(el);
-
-        return () => {
-            if (debounceTimer) window.clearTimeout(debounceTimer);
-            observer.disconnect();
-        };
-    }, [isDragging, scale]);
-
     return (
         <div className="monsters-window pointer-events-auto">
+            <ResizeHandle handleResizeStart={handleResizeStart} />
+
             <MonstersHeader onClose={handleClose} onDragStart={handleDragStart} onZoomIn={zoomIn} onZoomOut={zoomOut} t={t} />
 
             {/* Tab Navigation */}

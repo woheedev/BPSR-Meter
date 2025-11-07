@@ -124,7 +124,7 @@ function PlayerBarComponent({
                             e.stopPropagation();
                             onAddToRegistry(String(player.uid), name);
                         }}
-                        title={t("ui.buttons.addToRegistry", "Add to Player Registry")}
+                        title={t("ui.buttons.addToRegistry")}
                     >
                         <i className="fa-solid fa-plus"></i>
                     </button>
@@ -140,40 +140,39 @@ function PlayerBarComponent({
                             <span className="copy-feedback z-10">{t("ui.messages.copied")}</span>
                         )}
                     </button>
-                </div>
 
-                <img
-                    className="class-icon"
-                    src={`icons/${prof.icon}`}
-                    alt={professionName}
-                    title={professionName}
-                />
-
-                <div className="player-details">
-                    <span className="player-name" title={name}>
-                        <span>{name}</span>
-                        <span
-                            style={{
-                                color: "var(--text-secondary)",
-                                fontSize: "9px",
-                                fontWeight: 400,
-                            }}
-                        >
-                            {t("ui.stats.gs")}: {player.fightPoint}
+                    <img
+                        className="class-icon"
+                        src={`icons/${prof.icon}`}
+                        alt={professionName}
+                        title={professionName}
+                    />
+                    <div className="player-details">
+                        <span className="player-name" title={name}>
+                            <span>{name}</span>
+                            <span
+                                style={{
+                                    color: "var(--text-secondary)",
+                                    fontSize: "9px",
+                                    fontWeight: 400,
+                                }}
+                            >
+                                {t("ui.stats.gs")}: {player.fightPoint}
+                            </span>
                         </span>
-                    </span>
-                    <div className="hp-bar">
-                        <div
-                            className="hp-fill"
-                            style={{
-                                width: `${hpPercent}%`,
-                                background: hpColor,
-                            }}
-                        ></div>
-                        <span className="hp-text">
-                            {formatStat(player.hp || 0)}/
-                            {formatStat(player.max_hp || 0)}
-                        </span>
+                        <div className="hp-bar">
+                            <div
+                                className="hp-fill"
+                                style={{
+                                    width: `${hpPercent}%`,
+                                    background: hpColor,
+                                }}
+                            ></div>
+                            <span className="hp-text">
+                                {formatStat(player.hp || 0)}/
+                                {formatStat(player.max_hp || 0)}
+                            </span>
+                        </div>
                     </div>
                 </div>
 

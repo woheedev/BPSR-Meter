@@ -1,5 +1,3 @@
-// Type definitions for Electron API exposed via preload
-
 export interface UpdateInfo {
     available: boolean;
     currentVersion: string;
@@ -9,6 +7,8 @@ export interface UpdateInfo {
     error?: string;
 }
 
+type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+
 export interface ElectronAPI {
     closeWindow: () => void;
     toggleLockState: () => void;
@@ -17,24 +17,19 @@ export interface ElectronAPI {
         ignore: boolean,
         options?: { forward: boolean },
     ) => void;
-    getWindowPosition: () => Promise<{ x: number; y: number }>;
-    setWindowPosition: (x: number, y: number) => void;
-    resizeWindowToContent: (
-        windowType: "main" | "group" | "history" | "device" | "settings" | "monsters",
-        width: number,
-        height: number,
-        scale: number,
-    ) => void;
+    getWindowPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
+    setWindowPosition: (windowType: WindowType, x: number, y: number) => void;
+    resizeWindow: (windowType: WindowType, width: number, height: number) => void;
     openGroupWindow: () => void;
     openMonstersWindow: () => void;
     openHistoryWindow: () => void;
     openDeviceWindow: () => void;
     openSettingsWindow: () => void;
-    increaseWindowHeight: (windowType: "main" | "group" | "history" | "device" | "settings" | "monsters", step?: number) => void;
-    decreaseWindowHeight: (windowType: "main" | "group" | "history" | "device" | "settings" | "monsters", step?: number) => void;
     onWindowShown: (callback: () => void) => void;
+    onWindowFocused?: (callback: () => void) => () => void;
+    onWindowBlurred?: (callback: () => void) => () => void;
     saveWindowSize: (
-        windowType: "main" | "group" | "history" | "device" | "settings" | "monsters",
+        windowType: WindowType,
         width: number,
         height: number,
         scale?: number,
@@ -51,6 +46,8 @@ export interface ElectronAPI {
     onVisibleColumnsChanged?: (callback: (cols: Record<string, boolean>) => void) => void;
     updateGlobalSettings?: (settings: Partial<Record<string, any>>) => void;
     onTransparencySettingChanged?: (callback: (isDisabled: boolean) => void) => () => void;
+    onTransparencyAmountChanged?: (callback: (amount: number) => void) => () => void;
+    onClickthroughChanged?: (callback: (enabled: boolean) => void) => () => void;
     onHeightStepChanged?: (callback: (step: number) => void) => () => void;
     onManualHeightChanged?: (callback: (enabled: boolean) => void) => () => void;
     deleteHistoryLog?: (logId: string) => Promise<{ success: boolean; error?: string }>;
@@ -60,8 +57,8 @@ export interface ElectronAPI {
 
 declare global {
     interface Window {
-        electronAPI: ElectronAPI;
+        electron: ElectronAPI;
     }
 }
 
-export {};
+export { };

@@ -32,13 +32,8 @@ export interface ControlBarProps {
     onLanguageToggle: () => void;
 
     // Window controls
-    onOpenGroup: () => void;
-    onOpenHistory: () => void;
-    onOpenMonsters?: () => void;
     onZoomIn: () => void;
     onZoomOut: () => void;
-    onIncreaseHeight?: () => void;
-    onDecreaseHeight?: () => void;
     heightStep?: number;
     onHeightStepChange?: (step: number) => void;
 
@@ -75,13 +70,8 @@ export function ControlBar({
     onTogglePause,
     currentLanguage,
     onLanguageToggle,
-    onOpenGroup,
-    onOpenHistory,
-    onOpenMonsters,
     onZoomIn,
     onZoomOut,
-    onIncreaseHeight,
-    onDecreaseHeight,
     t,
     startTime,
     players,
@@ -90,34 +80,12 @@ export function ControlBar({
 }: ControlBarProps): React.JSX.Element {
     const isNearby = viewMode === "nearby";
     const isSkills = viewMode === "skills";
-    
-    const holdIntervalRef = useRef<number | null>(null);
-    const holdTimeoutRef = useRef<number | null>(null);
 
-    const startHoldAction = useCallback((action: () => void) => {
-        action();
-
-        holdTimeoutRef.current = window.setTimeout(() => {
-            holdIntervalRef.current = window.setInterval(action, 100);
-        }, 300);
-    }, []);
-
-    const stopHoldAction = useCallback(() => {
-        if (holdTimeoutRef.current) {
-            clearTimeout(holdTimeoutRef.current);
-            holdTimeoutRef.current = null;
-        }
-        if (holdIntervalRef.current) {
-            clearInterval(holdIntervalRef.current);
-            holdIntervalRef.current = null;
-        }
-    }, []);
-    
     let relevantPlayers = players || [];
     if (viewMode === "solo" && localUid !== null && localUid !== undefined) {
         relevantPlayers = relevantPlayers.filter(p => p.uid === localUid);
     } else if (manualGroupMembers && manualGroupMembers.length > 0) {
-        relevantPlayers = relevantPlayers.filter(p => 
+        relevantPlayers = relevantPlayers.filter(p =>
             manualGroupMembers.includes(String(p.uid))
         );
     }
@@ -133,8 +101,9 @@ export function ControlBar({
                 {/* Sync/Reset Button */}
                 <button
                     id="sync-button"
-                    className="sync-button"
+                    className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onSync}
+                    disabled={isLocked}
                     title={t("ui.buttons.resetStatistics")}
                 >
                     <i className="fa-solid fa-rotate-right sync-icon"></i>
@@ -143,8 +112,9 @@ export function ControlBar({
                 {/* Pause Button */}
                 <button
                     id="pause-button"
-                    className="control-button"
+                    className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onTogglePause}
+                    disabled={isLocked}
                     title={isPaused ? t("ui.buttons.resumeUpdates") : t("ui.buttons.pauseUpdates")}
                 >
                     <i className={`fa-solid fa-${isPaused ? "play" : "pause"}`}></i>
@@ -156,8 +126,11 @@ export function ControlBar({
                 {/* History Button */}
                 <button
                     id="history-btn"
-                    className="control-button advanced-lite-btn"
-                    onClick={onOpenHistory}
+                    className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                    onClick={() => {
+                        window.electron.openHistoryWindow();
+                    }}
+                    disabled={isLocked}
                     title={t("ui.buttons.openHistory")}
                 >
                     <i className="fa-solid fa-clock-rotate-left"></i>
@@ -166,8 +139,11 @@ export function ControlBar({
                 {/* Group Button */}
                 <button
                     id="group-btn"
-                    className="control-button group"
-                    onClick={onOpenGroup}
+                    className={`control-button group ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                    onClick={() => {
+                        window.electron.openGroupWindow();
+                    }}
+                    disabled={isLocked}
                     title={t("ui.buttons.openGroup")}
                 >
                     <i className="fa-solid fa-users"></i>
@@ -176,15 +152,11 @@ export function ControlBar({
                 {/* Monsters Button */}
                 <button
                     id="monsters-btn"
-                    className="control-button advanced-lite-btn"
+                    className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        if (window.electronAPI.openMonstersWindow) {
-                            window.electronAPI.openMonstersWindow();
-                        } else if (onOpenMonsters) {
-                            onOpenMonsters();
-                        }
+                        window.electron.openMonstersWindow();
                     }}
-                    title={t("ui.buttons.openMonsters", "Open Monsters")}
+                    title={t("ui.buttons.openMonsters")}
                 >
                     <i className="fa-solid fa-dragon"></i>
                 </button>
@@ -192,8 +164,9 @@ export function ControlBar({
                 {/* Skills View Toggle */}
                 <button
                     id="skills-btn"
-                    className={`control-button advanced-lite-btn ${viewMode === "skills" ? "active" : ""}`}
+                    className={`control-button advanced-lite-btn ${viewMode === "skills" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onToggleSkillsMode}
+                    disabled={isLocked}
                     title={t("ui.buttons.toggleSkillsView")}
                 >
                     <i className="fa-solid fa-chart-line"></i>
@@ -204,7 +177,8 @@ export function ControlBar({
                 {/* Nearby/Solo Toggle */}
                 <button
                     id="nearby-group-btn"
-                    className={`control-button advanced-lite-btn`}
+                    className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                    disabled={isLocked}
                     onClick={() => {
                         if (viewMode === "skills") {
                             onToggleSkillsScope && onToggleSkillsScope();
@@ -232,42 +206,41 @@ export function ControlBar({
                     <>
                         <button
                             id="sort-dmg-btn"
-                            className={`sort-button ${sortColumn === "totalDmg" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalDmg")}
+                            className={`sort-button ${sortColumn === "totalDmg" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                            onClick={() => !isLocked && isNearby && onSortChange("totalDmg")}
                             title={t("ui.buttons.sortDamage")}
-                            disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            disabled={isLocked || !isNearby}
+                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
                         >
                             DMG
                         </button>
                         <button
                             id="sort-tank-btn"
-                            className={`sort-button ${sortColumn === "totalDmgTaken" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalDmgTaken")}
+                            className={`sort-button ${sortColumn === "totalDmgTaken" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                            onClick={() => !isLocked && isNearby && onSortChange("totalDmgTaken")}
                             title={t("ui.buttons.sortDamageTaken")}
-                            disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            disabled={isLocked || !isNearby}
+                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
                         >
                             Tank
                         </button>
                         <button
                             id="sort-heal-btn"
-                            className={`sort-button ${sortColumn === "totalHeal" ? "active" : ""}`}
-                            onClick={() => isNearby && onSortChange("totalHeal")}
+                            className={`sort-button ${sortColumn === "totalHeal" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                            onClick={() => !isLocked && isNearby && onSortChange("totalHeal")}
                             title={t("ui.buttons.sortHealing")}
-                            disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            disabled={isLocked || !isNearby}
+                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
                         >
                             Heal
                         </button>
-                        {/* Show Top 10 / All toggle - rendered but disabled outside nearby mode */}
                         <button
                             id="toggle-top10-all"
-                            className={`control-button advanced-lite-btn ${showAllPlayers ? "active" : ""}`}
-                            onClick={() => isNearby && onToggleShowAll && onToggleShowAll()}
+                            className={`control-button advanced-lite-btn ${showAllPlayers ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                            onClick={() => !isLocked && isNearby && onToggleShowAll && onToggleShowAll()}
                             title={t("ui.buttons.toggleTop10All")}
-                            disabled={!isNearby}
-                            style={{ opacity: isNearby ? 1 : 0.4, cursor: isNearby ? "pointer" : "not-allowed" }}
+                            disabled={isLocked || !isNearby}
+                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
                         >
                             {showAllPlayers ? t("ui.controls.showAll") : t("ui.controls.showTop10")}
                         </button>
@@ -279,10 +252,11 @@ export function ControlBar({
                 {/* Settings */}
                 <div className="relative">
                     <button
-                        id="columns-btn"
-                        className="control-button"
-                        onClick={() => window.electronAPI.openSettingsWindow()}
-                        title={t("ui.buttons.columns")}
+                        id="settings-btn"
+                        className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
+                        onClick={() => window.electron.openSettingsWindow()}
+                        disabled={isLocked}
+                        title={t("ui.buttons.settings")}
                     >
                         <i className="fa-solid fa-cog"></i>
                     </button>
@@ -291,10 +265,11 @@ export function ControlBar({
                 {/* Device Picker Button */}
                 <button
                     id="device-btn"
-                    className="control-button advanced-lite-btn"
+                    className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        window.electronAPI.openDeviceWindow();
+                        window.electron.openDeviceWindow();
                     }}
+                    disabled={isLocked}
                     title={t("ui.buttons.openDevicePicker", "Select Network Device")}
                 >
                     <i className="fa-solid fa-network-wired"></i>
@@ -304,7 +279,7 @@ export function ControlBar({
                 <div className="flex gap-1">
                     <button
                         id="zoom-out-btn"
-                        className="control-button"
+                        className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                         onClick={onZoomOut}
                         title={t("ui.buttons.zoomOut")}
                         disabled={isLocked}
@@ -317,7 +292,7 @@ export function ControlBar({
                     </button>
                     <button
                         id="zoom-in-btn"
-                        className="control-button"
+                        className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                         onClick={onZoomIn}
                         title={t("ui.buttons.zoomIn")}
                         disabled={isLocked}
@@ -330,51 +305,12 @@ export function ControlBar({
                     </button>
                 </div>
 
-                {/* Height Controls */}
-                {(onDecreaseHeight || onIncreaseHeight) && (
-                    <div className="flex gap-1">
-                        {onDecreaseHeight && (
-                            <button
-                                id="decrease-height-btn"
-                                className="control-button"
-                                onMouseDown={() => startHoldAction(onDecreaseHeight)}
-                                onMouseUp={stopHoldAction}
-                                onMouseLeave={stopHoldAction}
-                                title={t("ui.buttons.decreaseHeight", "Decrease Height")}
-                                disabled={isLocked}
-                                style={{
-                                    opacity: isLocked ? 0.3 : 1,
-                                    cursor: isLocked ? "not-allowed" : "pointer",
-                                }}
-                            >
-                                <i className="fa-solid fa-down-left-and-up-right-to-center"></i>
-                            </button>
-                        )}
-                        {onIncreaseHeight && (
-                            <button
-                                id="increase-height-btn"
-                                className="control-button"
-                                onMouseDown={() => startHoldAction(onIncreaseHeight)}
-                                onMouseUp={stopHoldAction}
-                                onMouseLeave={stopHoldAction}
-                                title={t("ui.buttons.increaseHeight", "Increase Height")}
-                                disabled={isLocked}
-                                style={{
-                                    opacity: isLocked ? 0.3 : 1,
-                                    cursor: isLocked ? "not-allowed" : "pointer",
-                                }}
-                            >
-                                <i className="fa-solid fa-up-right-and-down-left-from-center"></i>
-                            </button>
-                        )}
-                    </div>
-                )}
-
                 {/* Language Toggle */}
                 <button
                     id="language-btn"
-                    className="control-button"
+                    className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onLanguageToggle}
+                    disabled={isLocked}
                     title={
                         currentLanguage === "en"
                             ? "切换到中文"
@@ -389,7 +325,7 @@ export function ControlBar({
                 {/* Lock Button */}
                 <button
                     id="lock-button"
-                    className="control-button"
+                    className={`control-button`}
                     onClick={onToggleLock}
                     title={isLocked ? t("ui.buttons.unlockWindow") : t("ui.buttons.lockWindow")}
                 >
@@ -401,14 +337,10 @@ export function ControlBar({
                 {/* Close Button */}
                 <button
                     id="close-button"
-                    className="control-button"
+                    className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onClose}
                     title={t("ui.buttons.close")}
-                    style={{
-                        opacity: isLocked ? 0.3 : 1,
-                        cursor: isLocked ? "not-allowed" : "pointer",
-                        pointerEvents: isLocked ? "none" : "auto",
-                    }}
+                    disabled={isLocked}
                 >
                     <i className="fa-solid fa-xmark"></i>
                 </button>

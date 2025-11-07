@@ -90,11 +90,17 @@ export interface GlobalSettings {
     lastPausedAt?: number | null;
     lastResumedAt?: number | null;
     enableBPTimerSubmission?: boolean;
-    enableManualHeight?: boolean;
-    heightStep?: number;
     performanceMode?: boolean;
     updateIntervalMs?: number;
     disableTransparency?: boolean;
+    transparencyAmount?: number;
+    lockPosition?: boolean;
+    lockKeybind?: string;
+    monstersKeybind?: string;
+    groupKeybind?: string;
+    settingsKeybind?: string;
+    deviceKeybind?: string;
+    historyKeybind?: string;
 }
 
 export interface ApiResponse<T = any> {

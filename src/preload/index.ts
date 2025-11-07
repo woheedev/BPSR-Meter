@@ -1,23 +1,20 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 
+type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+
 // Expose the API to the renderer process
-contextBridge.exposeInMainWorld("electronAPI", {
+contextBridge.exposeInMainWorld("electron", {
     closeWindow: () => ipcRenderer.send("close-window"),
     toggleLockState: () => ipcRenderer.send("toggle-lock-state"),
-    onLockStateChanged: (callback: (isLocked: boolean) => void) =>
-        ipcRenderer.on(
-            "lock-state-changed",
-            (_event: IpcRendererEvent, isLocked: boolean) => callback(isLocked),
-        ),
+    onLockStateChanged: (callback: (isLocked: boolean) => void) => {
+        const listener = (_event: IpcRendererEvent, isLocked: boolean) => callback(isLocked);
+        ipcRenderer.on("lock-state-changed", listener);
+        return () => ipcRenderer.removeListener("lock-state-changed", listener);
+    },
     setIgnoreMouseEvents: (ignore: boolean, options?: { forward: boolean }) => ipcRenderer.send("set-ignore-mouse-events", ignore, options),
     getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
-    setWindowPosition: (x: number, y: number) => ipcRenderer.send("set-window-position", x, y),
-    resizeWindowToContent: (
-        windowType: string,
-        width: number,
-        height: number,
-        scale: number,
-    ) => ipcRenderer.send("resize-window-to-content", windowType, width, height, scale),
+    setWindowPosition: (windowType: WindowType, x: number, y: number) => ipcRenderer.send("set-window-position", windowType, x, y),
+    resizeWindow: (windowType: WindowType, width: number, height: number) => ipcRenderer.send("resize-window", windowType, width, height),
     openGroupWindow: () => ipcRenderer.send("open-group-window"),
     openHistoryWindow: () => ipcRenderer.send("open-history-window"),
     openDeviceWindow: () => ipcRenderer.send("open-device-window"),
@@ -26,8 +23,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     increaseWindowHeight: (windowType: string, step?: number) => ipcRenderer.send("increase-window-height", windowType, step),
     decreaseWindowHeight: (windowType: string, step?: number) => ipcRenderer.send("decrease-window-height", windowType, step),
     onWindowShown: (callback: () => void) => ipcRenderer.on("window-shown", () => callback()),
+    onWindowFocused: (callback: () => void) => {
+        const listener = () => callback();
+        ipcRenderer.on("window-focused", listener);
+        return () => ipcRenderer.removeListener("window-focused", listener);
+    },
+    onWindowBlurred: (callback: () => void) => {
+        const listener = () => callback();
+        ipcRenderer.on("window-blurred", listener);
+        return () => ipcRenderer.removeListener("window-blurred", listener);
+    },
     saveWindowSize: (
-        windowType: string,
+        windowType: WindowType,
         width: number,
         height: number,
         scale?: number,
@@ -40,6 +47,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
         const listener = (_e: IpcRendererEvent, isDisabled: boolean) => callback(isDisabled);
         ipcRenderer.on("transparency-setting-changed", listener);
         return () => ipcRenderer.removeListener("transparency-setting-changed", listener);
+    },
+    onTransparencyAmountChanged: (callback: (amount: number) => void) => {
+        const listener = (_e: IpcRendererEvent, amount: number) => callback(amount);
+        ipcRenderer.on("transparency-amount-changed", listener);
+        return () => ipcRenderer.removeListener("transparency-amount-changed", listener);
+    },
+    onClickthroughChanged: (callback: (enabled: boolean) => void) => {
+        const listener = (_e: IpcRendererEvent, enabled: boolean) => callback(enabled);
+        ipcRenderer.on("clickthrough-changed", listener);
+        return () => ipcRenderer.removeListener("clickthrough-changed", listener);
     },
     onHeightStepChanged: (callback: (step: number) => void) => {
         const listener = (_e: IpcRendererEvent, step: number) => callback(step);
@@ -54,15 +71,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
     deleteHistoryLog: (logId: string) => ipcRenderer.invoke("delete-history-log", logId),
     checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
     checkForUpdatesWithDialog: () => ipcRenderer.invoke("check-for-updates-with-dialog"),
-});
-
-window.addEventListener("DOMContentLoaded", () => {
-    const replaceText = (selector: string, text: string) => {
-        const element = document.getElementById(selector);
-        if (element) element.innerText = text;
-    };
-
-    for (const type of ["chrome", "node", "electron"] as const) {
-        replaceText(`${type}-version`, process.versions[type] || "unknown");
-    }
 });

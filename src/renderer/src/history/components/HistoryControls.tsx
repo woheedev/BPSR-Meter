@@ -49,8 +49,8 @@ export function HistoryControls({
                     disabled={!isHistorySavingEnabled}
                     title={
                         saveOnLineSwitch
-                            ? t("ui.buttons.disableSaveOnLineSwitch", "Disable save on line switch")
-                            : t("ui.buttons.enableSaveOnLineSwitch", "Enable save on line switch")
+                            ? t("ui.buttons.disableSaveOnLineSwitch")
+                            : t("ui.buttons.enableSaveOnLineSwitch")
                     }
                     style={{
                         padding: "6px 12px",
@@ -64,9 +64,9 @@ export function HistoryControls({
                         className={`fa-solid fa-arrows-left-right`}
                         style={{ marginRight: "6px" }}
                     ></i>
-                    {saveOnLineSwitch 
-                        ? t("ui.messages.saveOnLineSwitch", "Save on line switch") 
-                        : t("ui.messages.skipLineSwitch", "Skip line switch")}
+                    {saveOnLineSwitch
+                        ? t("ui.messages.saveOnLineSwitch")
+                        : t("ui.messages.skipLineSwitch")}
                 </button>
             </div>
 

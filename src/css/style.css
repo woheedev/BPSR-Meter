@@ -1,9 +1,10 @@
 ﻿@import "tailwindcss";
 
 :root {
-    --bg-dark: rgba(15, 20, 30, 0.7);
-    --bg-darker: rgba(10, 15, 22, 0.8);
-    --bg-light: rgba(25, 32, 45, 0.6);
+    --transparency-amount: 0.7;
+    --bg-dark: rgba(15, 20, 30, var(--transparency-amount));
+    --bg-darker: rgba(10, 15, 22, calc(var(--transparency-amount) + 0.1));
+    --bg-light: rgba(25, 32, 45, calc(var(--transparency-amount) - 0.1));
     --accent-primary: #4a9eff;
     --text-primary: #ffffff;
     --text-secondary: #b4bcc9;
@@ -21,8 +22,16 @@
     --scale: 1;
 }
 
+#root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 html {
-    width: fit-content;
+    width: 100%;
+    height: 100%;
 }
 
 body {
@@ -34,11 +43,84 @@ body {
     padding: 0;
     border: 0;
     width: 100%;
-    min-height: 100vh;
+    height: 100%;
     pointer-events: none;
     zoom: var(--scale);
     display: flex;
     flex-direction: column;
+}
+
+/* Resize handles for frameless window */
+.resize-handle {
+    position: fixed;
+    -webkit-app-region: no-drag;
+    z-index: 9999;
+    pointer-events: all;
+}
+
+.resize-handle-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+}
+
+.resize-handle-bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    cursor: ns-resize;
+}
+
+.resize-handle-left {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 10px;
+    cursor: ew-resize;
+}
+
+.resize-handle-right {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+}
+
+/* Corner handles for diagonal resizing */
+.resize-handle-corner-tl {
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nwse-resize;
+}
+
+.resize-handle-corner-tr {
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nesw-resize;
+}
+
+.resize-handle-corner-bl {
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nesw-resize;
+}
+
+.resize-handle-corner-br {
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    cursor: nwse-resize;
 }
 
 body.performance-mode * {
@@ -75,11 +157,8 @@ body.performance-mode .player-bar::before {
 }
 
 .dps-meter {
-    width: fit-content;
-    height: auto;
-    min-width: 750px;
-    min-height: 300px;
-    max-height: none;
+    width: 100%;
+    height: 100%;
     background: var(--bg-dark);
     padding: 1px;
     display: flex;
@@ -88,6 +167,7 @@ body.performance-mode .player-bar::before {
     border-radius: var(--radius);
     pointer-events: none;
     position: relative;
+    box-sizing: border-box;
 }
 
 .controls {
@@ -104,6 +184,17 @@ body.performance-mode .player-bar::before {
     min-width: 0;
     flex-wrap: wrap;
     gap: var(--gap-xs);
+    -webkit-app-region: drag;
+}
+
+/* Make interactive elements in controls NOT draggable */
+.controls button,
+.controls input,
+.controls select,
+.controls textarea,
+.controls a,
+.controls [role="button"] {
+    -webkit-app-region: no-drag;
 }
 
 .control-button {
@@ -236,6 +327,27 @@ body.performance-mode .player-bar::before {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    height: 100%;
+}
+
+#player-bars-container::-webkit-scrollbar {
+    width: 8px;
+    pointer-events: all;
+}
+
+#player-bars-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+#player-bars-container::-webkit-scrollbar-thumb {
+    background: rgba(74, 158, 255, 0.3);
+    border-radius: 4px;
+    pointer-events: all;
+}
+
+#player-bars-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 158, 255, 0.5);
 }
 
 /* Resize handle hover effects */
@@ -286,7 +398,7 @@ body.performance-mode .player-bar::before {
 }
 
 .player-info-dps {
-    justify-content: space-around;
+    justify-content: space-between;
 }
 
 .add-to-registry-btn {
@@ -442,8 +554,8 @@ body.performance-mode .player-bar::before {
 
 /* Device Picker styles */
 .device-app {
-    min-width: 100dvw;
-    min-height: 260px;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(180deg, rgba(8, 12, 18, 0.85), rgba(6, 8, 12, 0.9));
     border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 0.5em;
@@ -935,7 +1047,7 @@ body.performance-mode .player-bar::before {
     max-width: 120px;
 }
 
-.player-name > span:first-child {
+.player-name>span:first-child {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -943,7 +1055,7 @@ body.performance-mode .player-bar::before {
     min-width: 0;
 }
 
-.player-name > span:last-child {
+.player-name>span:last-child {
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -1047,6 +1159,18 @@ body.performance-mode .player-bar::before {
     }
 }
 
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+}
+
 .stat-group {
     display: flex;
     flex-direction: column;
@@ -1088,15 +1212,14 @@ body.performance-mode .player-bar::before {
 
 .dps-meter-container {
     max-width: 100%;
-    max-height: auto;
+    height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
 /* Skills View Styles */
 .skills-container {
-    min-width: calc(650px * var(--scale));
-    max-height: calc(600px * var(--scale));
+    width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--bg-darker);
@@ -1395,9 +1518,8 @@ body.performance-mode .player-bar::before {
 
 /* History Window Styles */
 .history-window {
-    min-width: 800px;
-    width: calc(1200px * var(--scale));
-    height: calc(800px * var(--scale));
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1428,7 +1550,7 @@ body.performance-mode .player-bar::before {
 }
 
 .history-list-section {
-    width: 320px;
+    width: 300px;
     min-width: 280px;
     max-width: 400px;
     border-right: 1px solid var(--border);
@@ -1639,7 +1761,6 @@ body.performance-mode .player-bar::before {
 }
 
 .monsters-window {
-    min-width: calc(600px * var(--scale));
     width: 100%;
     height: 100%;
     background: var(--bg-dark);
@@ -1661,7 +1782,7 @@ body.performance-mode .player-bar::before {
     overflow-x: hidden;
     flex: 1 1 auto;
     min-height: 0;
-    max-height: calc(420px * var(--scale));
+    height: 100%;
     pointer-events: auto;
 }
 
@@ -1703,6 +1824,8 @@ body.performance-mode .player-bar::before {
     justify-content: center;
     transition: all var(--transition);
     font-size: 10px;
+    -webkit-app-region: no-drag;
+    pointer-events: auto;
 }
 
 .drag-indicator:hover {
@@ -2218,9 +2341,7 @@ body.performance-mode .player-bar::before {
 }
 
 .settings-window {
-    width: 100vw;
-    max-width: 360px;
-    max-height: 520px;
+    width: 100%;
     display: flex;
     background: var(--bg-darker);
     padding: 1px;
