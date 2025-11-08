@@ -107,4 +107,30 @@ contextBridge.exposeInMainWorld("electron", {
     checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
     checkForUpdatesWithDialog: () =>
         ipcRenderer.invoke("check-for-updates-with-dialog"),
+    // Update dialog APIs
+    onUpdateInfo: (callback: (updateInfo: any) => void) => {
+        const listener = (_event: IpcRendererEvent, updateInfo: any) =>
+            callback(updateInfo);
+        ipcRenderer.on("update-info", listener);
+        return () => ipcRenderer.removeListener("update-info", listener);
+    },
+    onDownloadProgress: (callback: (percent: number) => void) => {
+        const listener = (_event: IpcRendererEvent, percent: number) =>
+            callback(percent);
+        ipcRenderer.on("download-progress", listener);
+        return () => ipcRenderer.removeListener("download-progress", listener);
+    },
+    onUpdateStatus: (callback: (status: string) => void) => {
+        const listener = (_event: IpcRendererEvent, status: string) =>
+            callback(status);
+        ipcRenderer.on("update-status", listener);
+        return () => ipcRenderer.removeListener("update-status", listener);
+    },
+    onUpdateError: (callback: (error: string) => void) => {
+        const listener = (_event: IpcRendererEvent, error: string) =>
+            callback(error);
+        ipcRenderer.on("update-error", listener);
+        return () => ipcRenderer.removeListener("update-error", listener);
+    },
+    startDownload: () => ipcRenderer.send("start-download"),
 });

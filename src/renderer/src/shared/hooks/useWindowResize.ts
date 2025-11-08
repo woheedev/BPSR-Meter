@@ -18,7 +18,8 @@ type WindowType =
     | "history"
     | "device"
     | "settings"
-    | "monsters";
+    | "monsters"
+    | "update";
 
 export function useWindowResize(windowType: WindowType) {
     const [isResizing, setIsResizing] = useState(false);

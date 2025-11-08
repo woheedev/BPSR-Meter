@@ -1,6 +1,6 @@
 {
     "name": "bpsr-meter",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "description": "BPSR Meter",
     "author": "Denoder",
     "type": "module",
@@ -29,9 +29,11 @@
         "@electron-toolkit/utils": "^4.0.0",
         "@tailwindcss/vite": "^4.1.15",
         "@woheedev/bptimer-api-client": "^0.0.8",
+        "adm-zip": "^0.5.16",
         "bindings": "^1.5.0",
         "cap": "^0.2.1",
         "cors": "^2.8.5",
+        "electron-updater": "^6.6.2",
         "express": "^5.1.0",
         "google-protobuf": "^4.0.0",
         "is-admin": "^4.0.0",
@@ -45,6 +47,7 @@
         "tailwindcss": "^4.1.15"
     },
     "devDependencies": {
+        "@types/adm-zip": "^0.5.7",
         "@types/bindings": "^1.5.5",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.3",
@@ -89,6 +92,11 @@
             "**/*.sys"
         ],
         "compression": "maximum",
+        "publish": {
+            "provider": "github",
+            "owner": "Denoder",
+            "repo": "BPSR-Meter"
+        },
         "files": [
             "out/**/*",
             "algo/**/*",

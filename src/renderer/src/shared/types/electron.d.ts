@@ -13,7 +13,8 @@ type WindowType =
     | "history"
     | "device"
     | "settings"
-    | "monsters";
+    | "monsters"
+    | "update";
 
 export interface ElectronAPI {
     closeWindow: () => void;
@@ -80,6 +81,17 @@ export interface ElectronAPI {
     ) => Promise<{ success: boolean; error?: string }>;
     checkForUpdates?: () => Promise<UpdateInfo>;
     checkForUpdatesWithDialog?: () => Promise<UpdateInfo>;
+    onUpdateInfo?: (
+        callback: (info: UpdateInfo) => void,
+    ) => (() => void) | void;
+    onDownloadProgress?: (
+        callback: (percent: number) => void,
+    ) => (() => void) | void;
+    onUpdateStatus?: (
+        callback: (status: string) => void,
+    ) => (() => void) | void;
+    onUpdateError?: (callback: (error: string) => void) => (() => void) | void;
+    startDownload?: () => void;
 }
 
 declare global {

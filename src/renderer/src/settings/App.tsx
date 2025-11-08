@@ -466,9 +466,6 @@ export default function SettingsApp(): React.JSX.Element {
             const updateInfo = await electron.checkForUpdatesWithDialog();
 
             if (!updateInfo.available && !updateInfo.error) {
-                alert(
-                    `You're running the latest version (${updateInfo.currentVersion})`,
-                );
             } else if (updateInfo.error) {
                 alert(`Failed to check for updates: ${updateInfo.error}`);
             }

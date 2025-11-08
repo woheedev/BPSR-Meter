@@ -6,23 +6,27 @@ import MonstersApp from "./monsters/App";
 import HistoryApp from "./history/App";
 import DeviceApp from "./device/App";
 import SettingsApp from "./settings/App";
+import UpdateApp from "./update/App";
 import "/css/style.css";
 
 const renderApp = () => {
     const path = window.location.pathname;
 
-    if (path.includes("group.html")) {
-        return <GroupApp />;
-    } else if (path.includes("monsters.html")) {
-        return <MonstersApp />;
-    } else if (path.includes("history.html")) {
-        return <HistoryApp />;
-    } else if (path.includes("device.html")) {
-        return <DeviceApp />;
-    } else if (path.includes("settings.html")) {
-        return <SettingsApp />;
-    } else {
-        return <MainApp />;
+    switch (path) {
+        case "/group.html":
+            return <GroupApp />;
+        case "/monsters.html":
+            return <MonstersApp />;
+        case "/history.html":
+            return <HistoryApp />;
+        case "/device.html":
+            return <DeviceApp />;
+        case "/settings.html":
+            return <SettingsApp />;
+        case "/update.html":
+            return <UpdateApp />;
+        default:
+            return <MainApp />;
     }
 };
 

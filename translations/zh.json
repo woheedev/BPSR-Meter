@@ -54,7 +54,10 @@
             "totalDamageDealt": "总伤害",
             "noDamageData": "暂无伤害数据",
             "topContributors": "伤害排名",
-            "skillBreakdown": "技能伤害分布"
+            "skillBreakdown": "技能伤害分布",
+            "loadingUpdateInfo": "正在加载更新信息...",
+            "downloadingUpdate": "正在下载更新...",
+            "noReleaseNotes": "暂无更新说明。"
         },
         "buttons": {
             "resetStatistics": "重置统计",
@@ -101,7 +104,11 @@
             "allMonsters": "所有怪物",
             "sort": "排序",
             "asc": "升序 ↑",
-            "desc": "降序 ↓"
+            "desc": "降序 ↓",
+            "cancel": "取消",
+            "remindLater": "稍后提醒",
+            "reinstall": "重新安装",
+            "downloadInstall": "下载并安装"
         },
         "titles": {
             "combatHistory": "战斗历史",
@@ -115,7 +122,10 @@
             "monsters": "怪物",
             "monsterList": "怪物列表",
             "bossSchedule": "Boss刷新时间表",
-            "devicePicker": "网络设备"
+            "devicePicker": "网络设备",
+            "update": "更新",
+            "alreadyUpToDate": "已是最新版本",
+            "updateAvailable": "发现新版本"
         },
         "settings": {
             "sections": {
@@ -187,6 +197,12 @@
         "group": {
             "enableGroupFilter": "启用小队过滤",
             "currentGroupMembers": "当前小队成员："
+        },
+        "update": {
+            "currentVersion": "当前版本",
+            "latestVersion": "最新版本",
+            "releaseNotes": "更新说明",
+            "reinstallWarning": "您已经是最新版本。如果遇到问题，可以重新安装。"
         },
         "skills": {
             "total": "总计",

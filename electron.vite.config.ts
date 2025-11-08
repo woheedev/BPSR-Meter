@@ -66,6 +66,7 @@ export default defineConfig({
                     device: path.resolve(__dirname, 'src/device.html'),
                     settings: path.resolve(__dirname, 'src/settings.html'),
                     monsters: path.resolve(__dirname, 'src/monsters.html'),
+                    update: path.resolve(__dirname, 'src/update.html'),
                 },
                 output: {
                     manualChunks(id: string) {

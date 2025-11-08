@@ -10,7 +10,7 @@ import {
 import {
     checkForUpdates,
     checkForUpdatesSilent,
-    showUpdateDialog,
+    checkForUpdatesManual,
 } from "./updateChecker";
 import path from "path";
 import { exec, fork, ChildProcess } from "child_process";
@@ -29,6 +29,7 @@ const WINDOW_CONFIGS = {
     device: { defaultSize: { width: 600, height: 400 }, resizable: true },
     settings: { defaultSize: { width: 420, height: 520 }, resizable: true },
     monsters: { defaultSize: { width: 950, height: 600 }, resizable: true },
+    update: { defaultSize: { width: 500, height: 650 }, resizable: false },
 } as const;
 
 type WindowType = keyof typeof WINDOW_CONFIGS;
@@ -41,6 +42,7 @@ const windows: Record<WindowType, BrowserWindow | null> = {
     device: null,
     settings: null,
     monsters: null,
+    update: null,
 };
 
 const lastWindowSizes: Record<WindowType, WindowSize> = {
@@ -50,6 +52,7 @@ const lastWindowSizes: Record<WindowType, WindowSize> = {
     device: { width: 600, height: 400, scale: 1 },
     settings: { width: 420, height: 520, scale: 1 },
     monsters: { width: 950, height: 600, scale: 1 },
+    update: { width: 500, height: 650, scale: 1 },
 };
 
 let serverProcess: ChildProcess | null = null;
@@ -383,6 +386,11 @@ function setupIpcHandlers() {
     ipcMain.on("open-monsters-window", () =>
         createOrFocusWindow("monsters").catch((err) =>
             logToFile(`Error opening monsters window: ${err}`),
+        ),
+    );
+    ipcMain.on("open-update-window", () =>
+        createOrFocusWindow("update").catch((err) =>
+            logToFile(`Error opening update window: ${err}`),
         ),
     );
 
@@ -727,13 +735,7 @@ function setupIpcHandlers() {
 
     ipcMain.handle("check-for-updates-with-dialog", async () => {
         const currentVersion = app.getVersion();
-        const updateInfo = await checkForUpdates(currentVersion);
-
-        if (updateInfo.available) {
-            await showUpdateDialog(updateInfo);
-        }
-
-        return updateInfo;
+        return await checkForUpdatesManual(currentVersion);
     });
 }
 
@@ -940,6 +942,7 @@ app.whenReady().then(() => {
 
     createMainWindow();
 
+    // Check for updates after app starts
     setTimeout(() => {
         const currentVersion = app.getVersion();
         checkForUpdatesSilent(currentVersion).catch((err) => {

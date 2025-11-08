@@ -11,7 +11,8 @@ export interface UseWindowControlsOptions {
         | "history"
         | "device"
         | "settings"
-        | "monsters";
+        | "monsters"
+        | "update";
 }
 
 export interface UseWindowControlsReturn {

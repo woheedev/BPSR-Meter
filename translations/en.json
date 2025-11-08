@@ -54,7 +54,10 @@
             "totalDamageDealt": "Total Damage Dealt",
             "noDamageData": "No damage data available",
             "topContributors": "Top Contributors",
-            "skillBreakdown": "Skill Breakdown"
+            "skillBreakdown": "Skill Breakdown",
+            "loadingUpdateInfo": "Loading update information...",
+            "downloadingUpdate": "Downloading update...",
+            "noReleaseNotes": "No release notes available."
         },
         "buttons": {
             "resetStatistics": "Reset statistics",
@@ -101,7 +104,11 @@
             "allMonsters": "All Monsters",
             "sort": "Sort",
             "asc": "Asc ↑",
-            "desc": "Desc ↓"
+            "desc": "Desc ↓",
+            "cancel": "Cancel",
+            "remindLater": "Remind Me Later",
+            "reinstall": "Reinstall",
+            "downloadInstall": "Download & Install"
         },
         "titles": {
             "combatHistory": "Combat History",
@@ -115,7 +122,10 @@
             "monsters": "Monsters",
             "monsterList": "Monster List",
             "bossSchedule": "Boss Schedule",
-            "devicePicker": "Network Device"
+            "devicePicker": "Network Device",
+            "update": "Update",
+            "alreadyUpToDate": "Already Up to Date",
+            "updateAvailable": "Update Available"
         },
         "settings": {
             "sections": {
@@ -187,6 +197,12 @@
         "group": {
             "enableGroupFilter": "Enable Group Filter",
             "currentGroupMembers": "Current group members:"
+        },
+        "update": {
+            "currentVersion": "Current Version",
+            "latestVersion": "Latest Version",
+            "releaseNotes": "Release Notes",
+            "reinstallWarning": "You are already on the latest version. You can reinstall it if you're experiencing issues."
         },
         "skills": {
             "total": "Total",

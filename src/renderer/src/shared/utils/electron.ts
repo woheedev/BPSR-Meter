@@ -15,6 +15,16 @@ export function safeElectron<T = any>(
     }
 }
 
+export interface UpdateInfo {
+    version: string;
+    releaseNotes: string;
+    downloadUrl: string;
+    canReinstall: boolean;
+    currentVersion: string;
+    latestVersion: string;
+    available: boolean;
+}
+
 export const electron = {
     // Window controls
     closeWindow: () => safeElectron("closeWindow"),
@@ -76,6 +86,16 @@ export const electron = {
             available: false,
             error: "API not available",
         },
+    installUpdateAndRestart: () => safeElectron("installUpdateAndRestart"),
+    onUpdateInfo: (callback: (info: UpdateInfo) => void) =>
+        safeElectron("onUpdateInfo", callback),
+    onDownloadProgress: (callback: (percent: number) => void) =>
+        safeElectron("onDownloadProgress", callback),
+    onUpdateStatus: (callback: (status: string) => void) =>
+        safeElectron("onUpdateStatus", callback),
+    onUpdateError: (callback: (error: string) => void) =>
+        safeElectron("onUpdateError", callback),
+    startDownload: () => safeElectron("startDownload"),
 
     // History
     deleteHistoryLog: async (

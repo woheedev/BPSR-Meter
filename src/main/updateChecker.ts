@@ -1,5 +1,9 @@
-import { dialog } from "electron";
-import { shell } from "electron";
+﻿import { app, BrowserWindow, ipcMain } from "electron";
+import * as fs from "fs";
+import * as path from "path";
+import * as https from "https";
+import { exec } from "child_process";
+import AdmZip from "adm-zip";
 
 export interface UpdateInfo {
     available: boolean;
@@ -8,15 +12,12 @@ export interface UpdateInfo {
     downloadUrl?: string;
     releaseNotes?: string;
     error?: string;
+    canReinstall?: boolean;
 }
 
 const GITHUB_REPO = "Denoder/BPSR-Meter";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
-/**
- * Compares two semantic version strings
- * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if equal
- */
 function compareVersions(v1: string, v2: string): number {
     const cleanV1 = v1.replace(/^v/, "");
     const cleanV2 = v2.replace(/^v/, "");
@@ -35,9 +36,6 @@ function compareVersions(v1: string, v2: string): number {
     return 0;
 }
 
-/**
- * Checks GitHub releases for updates
- */
 export async function checkForUpdates(
     currentVersion: string,
 ): Promise<UpdateInfo> {
@@ -59,7 +57,8 @@ export async function checkForUpdates(
         const latestVersion = release.tag_name.replace(/^v/, "");
         const cleanCurrentVersion = currentVersion.replace(/^v/, "");
 
-        const isNewer = compareVersions(latestVersion, cleanCurrentVersion) > 0;
+        const comparison = compareVersions(latestVersion, cleanCurrentVersion);
+        const isNewer = comparison > 0;
 
         const asset = release.assets?.find(
             (a: any) =>
@@ -74,6 +73,7 @@ export async function checkForUpdates(
             latestVersion: latestVersion,
             downloadUrl: asset?.browser_download_url || release.html_url,
             releaseNotes: release.body,
+            canReinstall: comparison === 0,
         };
     } catch (error) {
         console.error("Failed to check for updates:", error);
@@ -87,32 +87,193 @@ export async function checkForUpdates(
 }
 
 /**
- * Shows an update dialog to the user
+ * Downloads a file from URL to destination path
  */
-export async function showUpdateDialog(updateInfo: UpdateInfo): Promise<void> {
-    const { latestVersion, currentVersion, downloadUrl, releaseNotes } =
-        updateInfo;
+async function downloadFile(
+    url: string,
+    destPath: string,
+    onProgress?: (percent: number) => void,
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(destPath);
 
-    const message = `A new version of BPSR Meter is available!\n\nCurrent version: ${currentVersion}\nLatest version: ${latestVersion}\n\n${releaseNotes ? `Release notes:\n${releaseNotes.substring(0, 300)}${releaseNotes.length > 300 ? "..." : ""}` : ""}`;
+        https
+            .get(url, (response) => {
+                if (
+                    response.statusCode === 302 ||
+                    response.statusCode === 301
+                ) {
+                    if (response.headers.location) {
+                        file.close();
+                        fs.unlinkSync(destPath);
+                        downloadFile(
+                            response.headers.location,
+                            destPath,
+                            onProgress,
+                        )
+                            .then(resolve)
+                            .catch(reject);
+                        return;
+                    }
+                }
 
-    const response = await dialog.showMessageBox({
-        type: "info",
-        title: "Update Available",
-        message: "BPSR Meter Update",
-        detail: message,
-        buttons: ["Download Update", "Remind Me Later"],
-        defaultId: 0,
-        cancelId: 1,
+                const totalBytes = parseInt(
+                    response.headers["content-length"] || "0",
+                    10,
+                );
+                let downloadedBytes = 0;
+
+                response.on("data", (chunk) => {
+                    downloadedBytes += chunk.length;
+                    if (onProgress && totalBytes > 0) {
+                        onProgress(
+                            Math.round((downloadedBytes / totalBytes) * 100),
+                        );
+                    }
+                });
+
+                response.pipe(file);
+
+                file.on("finish", () => {
+                    file.close();
+                    resolve();
+                });
+            })
+            .on("error", (err) => {
+                fs.unlink(destPath, () => reject(err));
+            });
+
+        file.on("error", (err) => {
+            fs.unlink(destPath, () => reject(err));
+        });
     });
-
-    if (response.response === 0 && downloadUrl) {
-        shell.openExternal(downloadUrl);
-    }
 }
 
 /**
- * Checks for updates silently (no dialog if no update available)
+ * Extracts ZIP and finds the installer EXE
  */
+async function extractAndFindInstaller(
+    zipPath: string,
+    extractPath: string,
+): Promise<string | null> {
+    const zip = new AdmZip(zipPath);
+    zip.extractAllTo(extractPath, true);
+
+    const files = fs.readdirSync(extractPath);
+    const exeFile = files.find(
+        (f) => f.endsWith(".exe") && f.includes("Setup"),
+    );
+
+    return exeFile ? path.join(extractPath, exeFile) : null;
+}
+
+let pendingUpdateInfo: UpdateInfo | null = null;
+
+/**
+ * Gets the update window (assumes it's created via createOrFocusWindow)
+ */
+function getUpdateWindow(): BrowserWindow | null {
+    return (
+        BrowserWindow.getAllWindows().find((w) => w.getTitle() === "Update") ||
+        null
+    );
+}
+
+/**
+ * Downloads, extracts, and runs the installer with progress updates
+ */
+async function downloadAndInstall(
+    downloadUrl: string,
+    version: string,
+): Promise<void> {
+    const tempDir = path.join(app.getPath("temp"), "bpsr-meter-update");
+    const updateWindow = getUpdateWindow();
+
+    if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+
+    fs.mkdirSync(tempDir, { recursive: true });
+
+    const zipPath = path.join(tempDir, `update-${version}.zip`);
+    const extractPath = path.join(tempDir, "extracted");
+
+    try {
+        updateWindow?.webContents.send(
+            "update-status",
+            "Downloading update...",
+        );
+        await downloadFile(downloadUrl, zipPath, (percent) => {
+            updateWindow?.webContents.send("download-progress", percent);
+        });
+
+        updateWindow?.webContents.send("update-status", "Extracting files...");
+        updateWindow?.webContents.send("download-progress", 100);
+
+        fs.mkdirSync(extractPath, { recursive: true });
+        const installerPath = await extractAndFindInstaller(
+            zipPath,
+            extractPath,
+        );
+
+        if (!installerPath) {
+            throw new Error(
+                "Installer executable not found in the downloaded package",
+            );
+        }
+
+        updateWindow?.webContents.send("update-status", "Ready to install");
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        exec(`"${installerPath}"`, (error) => {
+            if (error) {
+                console.error("Failed to run installer:", error);
+            }
+        });
+
+        setTimeout(() => {
+            app.quit();
+        }, 500);
+    } catch (error) {
+        console.error("Update installation failed:", error);
+        const errorMessage =
+            error instanceof Error ? error.message : String(error);
+        updateWindow?.webContents.send("update-error", errorMessage);
+
+        // Clean up
+        if (fs.existsSync(tempDir)) {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+    }
+}
+
+ipcMain.on("start-download", async () => {
+    if (pendingUpdateInfo?.downloadUrl && pendingUpdateInfo?.latestVersion) {
+        await downloadAndInstall(
+            pendingUpdateInfo.downloadUrl,
+            pendingUpdateInfo.latestVersion,
+        );
+    }
+});
+
+export async function showUpdateDialog(updateInfo: UpdateInfo): Promise<void> {
+    pendingUpdateInfo = updateInfo;
+
+    ipcMain.emit("open-update-window");
+
+    const isUpdateWindowOpen = setInterval(() => {
+        const updateWindow = getUpdateWindow();
+        if (!updateWindow.isDestroyed() && pendingUpdateInfo) {
+            setTimeout(() => {
+                updateWindow.webContents.send("update-info", pendingUpdateInfo);
+                pendingUpdateInfo = null;
+            }, 1000);
+            clearInterval(isUpdateWindowOpen);
+        }
+    }, 1000);
+}
+
 export async function checkForUpdatesSilent(
     currentVersion: string,
 ): Promise<UpdateInfo> {
@@ -121,6 +282,15 @@ export async function checkForUpdatesSilent(
     if (updateInfo.available) {
         await showUpdateDialog(updateInfo);
     }
+
+    return updateInfo;
+}
+
+export async function checkForUpdatesManual(
+    currentVersion: string,
+): Promise<UpdateInfo> {
+    const updateInfo = await checkForUpdates(currentVersion);
+    await showUpdateDialog(updateInfo);
 
     return updateInfo;
 }
