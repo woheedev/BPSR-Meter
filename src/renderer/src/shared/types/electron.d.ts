@@ -7,7 +7,13 @@ export interface UpdateInfo {
     error?: string;
 }
 
-type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+type WindowType =
+    | "main"
+    | "group"
+    | "history"
+    | "device"
+    | "settings"
+    | "monsters";
 
 export interface ElectronAPI {
     closeWindow: () => void;
@@ -17,9 +23,18 @@ export interface ElectronAPI {
         ignore: boolean,
         options?: { forward: boolean },
     ) => void;
-    getWindowPosition: () => Promise<{ x: number; y: number; width: number; height: number }>;
+    getWindowPosition: () => Promise<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }>;
     setWindowPosition: (windowType: WindowType, x: number, y: number) => void;
-    resizeWindow: (windowType: WindowType, width: number, height: number) => void;
+    resizeWindow: (
+        windowType: WindowType,
+        width: number,
+        height: number,
+    ) => void;
     openGroupWindow: () => void;
     openMonstersWindow: () => void;
     openHistoryWindow: () => void;
@@ -43,14 +58,26 @@ export interface ElectronAPI {
         monsters?: { width: number; height: number; scale?: number };
     }>;
     updateVisibleColumns?: (cols: Record<string, boolean>) => void;
-    onVisibleColumnsChanged?: (callback: (cols: Record<string, boolean>) => void) => void;
+    onVisibleColumnsChanged?: (
+        callback: (cols: Record<string, boolean>) => void,
+    ) => void;
     updateGlobalSettings?: (settings: Partial<Record<string, any>>) => void;
-    onTransparencySettingChanged?: (callback: (isDisabled: boolean) => void) => () => void;
-    onTransparencyAmountChanged?: (callback: (amount: number) => void) => () => void;
-    onClickthroughChanged?: (callback: (enabled: boolean) => void) => () => void;
+    onTransparencySettingChanged?: (
+        callback: (isDisabled: boolean) => void,
+    ) => () => void;
+    onTransparencyAmountChanged?: (
+        callback: (amount: number) => void,
+    ) => () => void;
+    onClickthroughChanged?: (
+        callback: (enabled: boolean) => void,
+    ) => () => void;
     onHeightStepChanged?: (callback: (step: number) => void) => () => void;
-    onManualHeightChanged?: (callback: (enabled: boolean) => void) => () => void;
-    deleteHistoryLog?: (logId: string) => Promise<{ success: boolean; error?: string }>;
+    onManualHeightChanged?: (
+        callback: (enabled: boolean) => void,
+    ) => () => void;
+    deleteHistoryLog?: (
+        logId: string,
+    ) => Promise<{ success: boolean; error?: string }>;
     checkForUpdates?: () => Promise<UpdateInfo>;
     checkForUpdatesWithDialog?: () => Promise<UpdateInfo>;
 }
@@ -61,4 +88,4 @@ declare global {
     }
 }
 
-export { };
+export {};

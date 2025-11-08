@@ -8,8 +8,7 @@
 
 # Logs
 /logs
-/logs_dps.json
-dist/logs/
+/damage_logs
 information_log.txt*
 
 # Build output
@@ -29,7 +28,6 @@ player_registry.json
 
 # Misc
 .npmrc
-/Prerequisites/npcap-1.83.exe
 pnpm-lock.yaml
 
 # Electron packaged output

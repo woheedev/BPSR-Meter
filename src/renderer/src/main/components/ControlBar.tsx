@@ -1,7 +1,8 @@
-import React, { memo, useRef, useCallback } from "react";
-import { DragIndicator } from "./DragIndicator";
+import React from "react";
+import { DragIndicator } from "@/src/shared/components/DragIndicator";
 import { CombatTimer } from "./CombatTimer";
-import type { ViewMode, SortColumn } from "../../shared/types";
+import type { ViewMode, SortColumn } from "@shared/types";
+import { electron } from "@/src/shared/utils/electron";
 
 export interface ControlBarProps {
     // Window controls
@@ -83,14 +84,16 @@ export function ControlBar({
 
     let relevantPlayers = players || [];
     if (viewMode === "solo" && localUid !== null && localUid !== undefined) {
-        relevantPlayers = relevantPlayers.filter(p => p.uid === localUid);
+        relevantPlayers = relevantPlayers.filter((p) => p.uid === localUid);
     } else if (manualGroupMembers && manualGroupMembers.length > 0) {
-        relevantPlayers = relevantPlayers.filter(p =>
-            manualGroupMembers.includes(String(p.uid))
+        relevantPlayers = relevantPlayers.filter((p) =>
+            manualGroupMembers.includes(String(p.uid)),
         );
     }
 
-    const hasDamage = relevantPlayers.length > 0 && relevantPlayers.some(p => p.total_damage && p.total_damage.total > 0);
+    const hasDamage =
+        relevantPlayers.length > 0 &&
+        relevantPlayers.some((p) => p.total_damage && p.total_damage.total > 0);
 
     return (
         <div className="controls gap-3">
@@ -115,20 +118,32 @@ export function ControlBar({
                     className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={onTogglePause}
                     disabled={isLocked}
-                    title={isPaused ? t("ui.buttons.resumeUpdates") : t("ui.buttons.pauseUpdates")}
+                    title={
+                        isPaused
+                            ? t("ui.buttons.resumeUpdates")
+                            : t("ui.buttons.pauseUpdates")
+                    }
                 >
-                    <i className={`fa-solid fa-${isPaused ? "play" : "pause"}`}></i>
+                    <i
+                        className={`fa-solid fa-${isPaused ? "play" : "pause"}`}
+                    ></i>
                 </button>
 
                 {/* Combat Timer - only show when there's damage */}
-                {startTime && hasDamage && <CombatTimer startTime={startTime} isPaused={isPaused} hasDamage={true} />}
+                {startTime && hasDamage && (
+                    <CombatTimer
+                        startTime={startTime}
+                        isPaused={isPaused}
+                        hasDamage={true}
+                    />
+                )}
 
                 {/* History Button */}
                 <button
                     id="history-btn"
                     className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        window.electron.openHistoryWindow();
+                        electron.openHistoryWindow();
                     }}
                     disabled={isLocked}
                     title={t("ui.buttons.openHistory")}
@@ -141,7 +156,7 @@ export function ControlBar({
                     id="group-btn"
                     className={`control-button group ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        window.electron.openGroupWindow();
+                        electron.openGroupWindow();
                     }}
                     disabled={isLocked}
                     title={t("ui.buttons.openGroup")}
@@ -154,7 +169,7 @@ export function ControlBar({
                     id="monsters-btn"
                     className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        window.electron.openMonstersWindow();
+                        electron.openMonstersWindow();
                     }}
                     title={t("ui.buttons.openMonsters")}
                 >
@@ -197,8 +212,8 @@ export function ControlBar({
                             ? t("ui.controls.nearby")
                             : t("ui.controls.solo")
                         : viewMode === "nearby"
-                            ? t("ui.controls.nearby")
-                            : t("ui.controls.solo")}
+                          ? t("ui.controls.nearby")
+                          : t("ui.controls.solo")}
                 </button>
 
                 {/* If in skills view, hide sort and column controls */}
@@ -207,42 +222,89 @@ export function ControlBar({
                         <button
                             id="sort-dmg-btn"
                             className={`sort-button ${sortColumn === "totalDmg" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
-                            onClick={() => !isLocked && isNearby && onSortChange("totalDmg")}
+                            onClick={() =>
+                                !isLocked &&
+                                isNearby &&
+                                onSortChange("totalDmg")
+                            }
                             title={t("ui.buttons.sortDamage")}
                             disabled={isLocked || !isNearby}
-                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
+                            style={{
+                                opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4,
+                                cursor: isLocked
+                                    ? "not-allowed"
+                                    : isNearby
+                                      ? "pointer"
+                                      : "not-allowed",
+                            }}
                         >
                             DMG
                         </button>
                         <button
                             id="sort-tank-btn"
                             className={`sort-button ${sortColumn === "totalDmgTaken" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
-                            onClick={() => !isLocked && isNearby && onSortChange("totalDmgTaken")}
+                            onClick={() =>
+                                !isLocked &&
+                                isNearby &&
+                                onSortChange("totalDmgTaken")
+                            }
                             title={t("ui.buttons.sortDamageTaken")}
                             disabled={isLocked || !isNearby}
-                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
+                            style={{
+                                opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4,
+                                cursor: isLocked
+                                    ? "not-allowed"
+                                    : isNearby
+                                      ? "pointer"
+                                      : "not-allowed",
+                            }}
                         >
                             Tank
                         </button>
                         <button
                             id="sort-heal-btn"
                             className={`sort-button ${sortColumn === "totalHeal" ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
-                            onClick={() => !isLocked && isNearby && onSortChange("totalHeal")}
+                            onClick={() =>
+                                !isLocked &&
+                                isNearby &&
+                                onSortChange("totalHeal")
+                            }
                             title={t("ui.buttons.sortHealing")}
                             disabled={isLocked || !isNearby}
-                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
+                            style={{
+                                opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4,
+                                cursor: isLocked
+                                    ? "not-allowed"
+                                    : isNearby
+                                      ? "pointer"
+                                      : "not-allowed",
+                            }}
                         >
                             Heal
                         </button>
                         <button
                             id="toggle-top10-all"
                             className={`control-button advanced-lite-btn ${showAllPlayers ? "active" : ""} ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
-                            onClick={() => !isLocked && isNearby && onToggleShowAll && onToggleShowAll()}
+                            onClick={() =>
+                                !isLocked &&
+                                isNearby &&
+                                onToggleShowAll &&
+                                onToggleShowAll()
+                            }
                             title={t("ui.buttons.toggleTop10All")}
                             disabled={isLocked || !isNearby}
-                            style={{ opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4, cursor: isLocked ? "not-allowed" : isNearby ? "pointer" : "not-allowed" }}
+                            style={{
+                                opacity: isLocked ? 0.3 : isNearby ? 1 : 0.4,
+                                cursor: isLocked
+                                    ? "not-allowed"
+                                    : isNearby
+                                      ? "pointer"
+                                      : "not-allowed",
+                            }}
                         >
-                            {showAllPlayers ? t("ui.controls.showAll") : t("ui.controls.showTop10")}
+                            {showAllPlayers
+                                ? t("ui.controls.showAll")
+                                : t("ui.controls.showTop10")}
                         </button>
                     </>
                 )}
@@ -254,7 +316,7 @@ export function ControlBar({
                     <button
                         id="settings-btn"
                         className={`control-button ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
-                        onClick={() => window.electron.openSettingsWindow()}
+                        onClick={() => electron.openSettingsWindow()}
                         disabled={isLocked}
                         title={t("ui.buttons.settings")}
                     >
@@ -267,10 +329,13 @@ export function ControlBar({
                     id="device-btn"
                     className={`control-button advanced-lite-btn ${isLocked ? "opacity-50 !pointer-events-none" : ""}`}
                     onClick={() => {
-                        window.electron.openDeviceWindow();
+                        electron.openDeviceWindow();
                     }}
                     disabled={isLocked}
-                    title={t("ui.buttons.openDevicePicker", "Select Network Device")}
+                    title={t(
+                        "ui.buttons.openDevicePicker",
+                        "Select Network Device",
+                    )}
                 >
                     <i className="fa-solid fa-network-wired"></i>
                 </button>
@@ -288,7 +353,7 @@ export function ControlBar({
                             cursor: isLocked ? "not-allowed" : "pointer",
                         }}
                     >
-                        <i className="fa-solid fa-minus"></i>
+                        <i className="fa-solid fa-magnifying-glass-minus"></i>
                     </button>
                     <button
                         id="zoom-in-btn"
@@ -301,7 +366,7 @@ export function ControlBar({
                             cursor: isLocked ? "not-allowed" : "pointer",
                         }}
                     >
-                        <i className="fa-solid fa-plus"></i>
+                        <i className="fa-solid fa-magnifying-glass-plus"></i>
                     </button>
                 </div>
 
@@ -327,7 +392,11 @@ export function ControlBar({
                     id="lock-button"
                     className={`control-button`}
                     onClick={onToggleLock}
-                    title={isLocked ? t("ui.buttons.unlockWindow") : t("ui.buttons.lockWindow")}
+                    title={
+                        isLocked
+                            ? t("ui.buttons.unlockWindow")
+                            : t("ui.buttons.lockWindow")
+                    }
                 >
                     <i
                         className={`fa-solid fa-${isLocked ? "lock" : "lock-open"}`}
@@ -349,4 +418,4 @@ export function ControlBar({
     );
 }
 
-export default memo(ControlBar);
+export default ControlBar;

@@ -20,7 +20,7 @@ class MonsterRespawnTracker {
             this.respawnData.set(monsterId, {
                 monsterId,
                 averageRespawnTime: 0,
-                samples: []
+                samples: [],
             });
         }
     }
@@ -42,7 +42,7 @@ class MonsterRespawnTracker {
             data = {
                 monsterId,
                 averageRespawnTime: respawnTime,
-                samples: [respawnTime]
+                samples: [respawnTime],
             };
             this.respawnData.set(monsterId, data);
         } else {
@@ -53,7 +53,8 @@ class MonsterRespawnTracker {
             }
 
             data.averageRespawnTime = Math.floor(
-                data.samples.reduce((sum, time) => sum + time, 0) / data.samples.length
+                data.samples.reduce((sum, time) => sum + time, 0) /
+                    data.samples.length,
             );
         }
 
@@ -73,7 +74,10 @@ class MonsterRespawnTracker {
     /**
      * Get estimated time until respawn for a specific monster instance
      */
-    getEstimatedRespawnTime(monsterUid: string, monsterId: string): number | null {
+    getEstimatedRespawnTime(
+        monsterUid: string,
+        monsterId: string,
+    ): number | null {
         const deathTime = this.deathTimes.get(monsterUid);
         const data = this.respawnData.get(monsterId);
 

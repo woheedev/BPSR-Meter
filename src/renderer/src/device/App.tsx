@@ -1,64 +1,56 @@
 import React, { useEffect } from "react";
 import { DevicePicker } from "./components/DevicePicker";
 import DeviceControlBar from "./components/DeviceControlBar";
-import { useWindowControls } from "../shared/hooks";
-import { useWindowResize } from "../shared/hooks/useWindowResize";
-import ResizeHandle from "../shared/components/ResizeHandle";
+import { useWindowControls } from "@shared/hooks";
+import { useWindowResize } from "@shared/hooks/useWindowResize";
+import { useTranslations } from "@shared/hooks/useTranslations";
+import ResizeHandle from "@shared/components/ResizeHandle";
+import { electron } from "@shared/utils/electron";
+import { getItem, setItem } from "@shared/utils/localStorage";
 
 export default function DeviceApp(): React.JSX.Element {
-    const { handleDragStart, handleClose } =
+    const { handleDragStart, handleClose, isLocked, zoomIn, zoomOut } =
         useWindowControls({
             baseWidth: 480,
             baseHeight: 530,
             windowType: "device",
         });
 
-    const { handleResizeStart } = useWindowResize('device');
+    const { handleResizeStart } = useWindowResize("device");
+    const { t } = useTranslations();
 
     useEffect(() => {
-        try {
-            const amount = localStorage.getItem("transparencyAmount") ?? "70";
-            const opacity = parseFloat(amount) / 100;
-            document.documentElement.style.setProperty(
-                "--transparency-amount",
-                opacity.toString(),
-            );
-        } catch (err) {
-            console.warn("Failed to apply transparency amount", err);
-        }
+        const amount = getItem("transparencyAmount") ?? "70";
+        const opacity = parseFloat(amount) / 100;
+        document.documentElement.style.setProperty(
+            "--transparency-amount",
+            opacity.toString(),
+        );
 
-        try {
-            const disableTransparency = localStorage.getItem("disableTransparency") === "true";
-            document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
-        } catch (err) {
-            console.warn("Failed to apply transparency setting", err);
-        }
+        const disableTransparency = getItem("disableTransparency") === "true";
+        document.body.style.backgroundColor = disableTransparency
+            ? "#000"
+            : "transparent";
 
-        try {
-            const unsubscribe = window.electron.onTransparencySettingChanged?.(
-                (isDisabled: boolean) => {
-                    document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-                },
-            );
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency listener", err);
-        }
+        const unsubscribe = electron.onTransparencySettingChanged(
+            (isDisabled: boolean) => {
+                document.body.style.backgroundColor = isDisabled
+                    ? "#000"
+                    : "transparent";
+            },
+        );
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        const unsubscribe = window.electron.onTransparencyAmountChanged?.(
+        const unsubscribe = electron.onTransparencyAmountChanged(
             (amount: number) => {
-                try {
-                    const opacity = amount / 100;
-                    document.documentElement.style.setProperty(
-                        "--transparency-amount",
-                        opacity.toString(),
-                    );
-                    localStorage.setItem("transparencyAmount", amount.toString());
-                } catch (err) {
-                    console.warn("Failed to update transparency amount", err);
-                }
+                const opacity = amount / 100;
+                document.documentElement.style.setProperty(
+                    "--transparency-amount",
+                    opacity.toString(),
+                );
+                setItem("transparencyAmount", amount.toString());
             },
         );
 
@@ -68,21 +60,13 @@ export default function DeviceApp(): React.JSX.Element {
     }, []);
 
     useEffect(() => {
-        try {
-            const enabled = localStorage.getItem("clickthroughEnabled") === "true";
-            window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-        } catch (err) {
-            console.warn("Failed to apply clickthrough setting", err);
-        }
+        const enabled = getItem("clickthroughEnabled") === "true";
+        electron.setIgnoreMouseEvents(enabled, { forward: true });
 
-        const unsubscribe = window.electron.onClickthroughChanged?.(
+        const unsubscribe = electron.onClickthroughChanged(
             (enabled: boolean) => {
-                try {
-                    window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-                    localStorage.setItem("clickthroughEnabled", enabled.toString());
-                } catch (err) {
-                    console.warn("Failed to update clickthrough setting", err);
-                }
+                electron.setIgnoreMouseEvents(enabled, { forward: true });
+                setItem("clickthroughEnabled", enabled.toString());
             },
         );
 
@@ -94,7 +78,15 @@ export default function DeviceApp(): React.JSX.Element {
     return (
         <div className="device-app">
             <ResizeHandle handleResizeStart={handleResizeStart} />
-            <DeviceControlBar title="Select Network Device" onDragStart={handleDragStart} onClose={handleClose} />
+            <DeviceControlBar
+                title={t("ui.titles.devicePicker")}
+                onDragStart={handleDragStart}
+                onClose={handleClose}
+                onZoomIn={zoomIn}
+                onZoomOut={zoomOut}
+                isLocked={isLocked}
+                t={t}
+            />
             <DevicePicker />
         </div>
     );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { PlayerRegistry } from "../../shared/types";
-import { useSocket } from "../../shared/hooks";
+import type { PlayerRegistry } from "@shared/types";
+import { useSocket } from "@shared/hooks";
 
 export interface AvailablePlayer {
     uuid: string;
@@ -46,8 +46,8 @@ export function useAvailablePlayers(
                         // Check playerRegistry for name if userData.name is missing or Unknown
                         const userName =
                             userData.name &&
-                                userData.name !== "Unknown" &&
-                                userData.name.trim() !== ""
+                            userData.name !== "Unknown" &&
+                            userData.name.trim() !== ""
                                 ? userData.name
                                 : playerRegistry[uid]?.name || "Unknown";
 
@@ -90,6 +90,6 @@ export function useAvailablePlayers(
 
     return {
         availablePlayers,
-        isLoading
+        isLoading,
     };
 }

@@ -168,7 +168,9 @@ export function getTranslations(): Translations {
 
 const otherTranslationsCache: Record<string, Translations | null> = {};
 
-export async function loadTranslationsFor(lang: string): Promise<Translations | null> {
+export async function loadTranslationsFor(
+    lang: string,
+): Promise<Translations | null> {
     if (!lang || typeof lang !== "string") return null;
 
     if (otherTranslationsCache[lang]) return otherTranslationsCache[lang];
@@ -188,15 +190,19 @@ export async function loadTranslationsFor(lang: string): Promise<Translations | 
     return null;
 }
 
-export async function translateForLang(lang: string, key: string, fallback: string | null = null): Promise<string | null> {
+export async function translateForLang(
+    lang: string,
+    key: string,
+    fallback: string | null = null,
+): Promise<string | null> {
     if (!lang || !key) return fallback;
     const tr = await loadTranslationsFor(lang);
     if (!tr) return fallback;
 
-    const keys = key.split('.');
+    const keys = key.split(".");
     let value: any = tr;
     for (const k of keys) {
-        if (value && typeof value === 'object' && k in value) {
+        if (value && typeof value === "object" && k in value) {
             value = value[k];
         } else {
             return fallback;

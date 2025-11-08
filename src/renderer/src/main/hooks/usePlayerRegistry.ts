@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { PlayerRegistry } from "../../shared/types";
+import type { PlayerRegistry } from "@shared/types";
 
 export interface UsePlayerRegistryReturn {
     playerRegistry: PlayerRegistry;

@@ -13,7 +13,7 @@ export default function SettingsNumberInput({
     value,
     min,
     max,
-    onChange
+    onChange,
 }: SettingsNumberInputProps): React.JSX.Element {
     return (
         <div className="settings-input-row">

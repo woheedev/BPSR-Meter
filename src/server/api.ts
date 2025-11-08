@@ -5,7 +5,12 @@ import { promises as fsPromises } from "fs";
 import { Server as HTTPServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cap from "cap";
-import type { Logger, GlobalSettings, ApiResponse, PlayerRegistry } from "../types/index";
+import type {
+    Logger,
+    GlobalSettings,
+    ApiResponse,
+    PlayerRegistry,
+} from "../types/index";
 import type { UserDataManager } from "./dataManager";
 import { reloadSkillTranslations } from "./dataManager";
 import { reloadMonsterTranslations } from "../../algo/packet";
@@ -13,7 +18,10 @@ import Sniffer from "./sniffer";
 
 // Use user data path in production, current directory in development
 const SETTINGS_PATH = path.join(process.env.USER_DATA_PATH, "settings.json");
-const PLAYER_REGISTRY_PATH = path.join(process.env.USER_DATA_PATH, "player_registry.json");
+const PLAYER_REGISTRY_PATH = path.join(
+    process.env.USER_DATA_PATH,
+    "player_registry.json",
+);
 
 interface ErrorWithCode extends Error {
     code?: string;
@@ -71,6 +79,18 @@ function initializeApi(
         const data: ApiResponse = {
             code: 0,
             enemy: enemiesData,
+        };
+        res.json(data);
+    });
+
+    app.get("/api/monster-damage/:monsterId", (req: Request, res: Response) => {
+        const { monsterId } = req.params;
+        const breakdown = userDataManager.getMonsterDamageBreakdown(
+            Number(monsterId),
+        );
+        const data: ApiResponse = {
+            code: 0,
+            data: breakdown,
         };
         res.json(data);
     });
@@ -210,16 +230,25 @@ function initializeApi(
             res.json({ code: 0, data: simplified });
         } catch (err) {
             logger.error("Failed to enumerate devices:", err);
-            res.status(500).json({ code: 1, msg: "Failed to enumerate devices" });
+            res.status(500).json({
+                code: 1,
+                msg: "Failed to enumerate devices",
+            });
         }
     });
 
     // Get or set selected device in settings
     app.get("/api/device", async (req: Request, res: Response) => {
         try {
-            res.json({ code: 0, data: { selectedDevice: globalSettings.selectedDevice || null } });
+            res.json({
+                code: 0,
+                data: { selectedDevice: globalSettings.selectedDevice || null },
+            });
         } catch (err) {
-            res.status(500).json({ code: 1, msg: "Failed to read device setting" });
+            res.status(500).json({
+                code: 1,
+                msg: "Failed to read device setting",
+            });
         }
     });
 
@@ -228,15 +257,25 @@ function initializeApi(
             const { selectedDevice } = req.body;
             globalSettings.selectedDevice = selectedDevice;
 
-            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 4), "utf8");
+            await fsPromises.writeFile(
+                SETTINGS_PATH,
+                JSON.stringify(globalSettings, null, 4),
+                "utf8",
+            );
 
             await sniffer.stop();
-            await sniffer.start(selectedDevice !== undefined ? selectedDevice : "auto", sniffer.getPacketProcessor());
+            await sniffer.start(
+                selectedDevice !== undefined ? selectedDevice : "auto",
+                sniffer.getPacketProcessor(),
+            );
 
             res.json({ code: 0, data: { selectedDevice } });
         } catch (err) {
             logger.error("Failed to persist selected device:", err);
-            res.status(500).json({ code: 1, msg: "Failed to persist selected device" });
+            res.status(500).json({
+                code: 1,
+                msg: "Failed to persist selected device",
+            });
         }
     });
 
@@ -396,6 +435,105 @@ function initializeApi(
         }
     });
 
+    const DAMAGE_LOGS_DIR = path.join(
+        process.env.USER_DATA_PATH,
+        "damage_logs",
+    );
+
+    app.post("/api/damage-logs/save", async (req: Request, res: Response) => {
+        try {
+            const { monsterId, monsterName, breakdown } = req.body;
+
+            await fsPromises.mkdir(DAMAGE_LOGS_DIR, { recursive: true });
+
+            const timestamp = Date.now();
+            const logEntry = {
+                monsterId,
+                monsterName,
+                timestamp,
+                breakdown,
+            };
+
+            const filename = `${monsterId}_${timestamp}.json`;
+            const filepath = path.join(DAMAGE_LOGS_DIR, filename);
+            await fsPromises.writeFile(
+                filepath,
+                JSON.stringify(logEntry, null, 2),
+            );
+
+            res.json({ code: 0, msg: "Log saved successfully", filename });
+        } catch (error) {
+            logger.error("Failed to save damage log:", error);
+            res.status(500).json({ code: -1, msg: "Failed to save log" });
+        }
+    });
+
+    app.get("/api/damage-logs/list", async (req: Request, res: Response) => {
+        try {
+            await fsPromises.mkdir(DAMAGE_LOGS_DIR, { recursive: true });
+
+            const files = await fsPromises.readdir(DAMAGE_LOGS_DIR);
+            const logs = await Promise.all(
+                files
+                    .filter((f) => f.endsWith(".json"))
+                    .map(async (file) => {
+                        const filepath = path.join(DAMAGE_LOGS_DIR, file);
+                        const content = await fsPromises.readFile(
+                            filepath,
+                            "utf-8",
+                        );
+                        const data = JSON.parse(content);
+                        return {
+                            filename: file,
+                            monsterId: data.monsterId,
+                            monsterName: data.monsterName,
+                            isBoss: data.isBoss,
+                            timestamp: data.timestamp,
+                        };
+                    }),
+            );
+
+            // Sort by timestamp descending
+            logs.sort((a, b) => b.timestamp - a.timestamp);
+
+            res.json({ code: 0, data: logs });
+        } catch (error) {
+            logger.error("Failed to list damage logs:", error);
+            res.status(500).json({ code: -1, msg: "Failed to list logs" });
+        }
+    });
+
+    app.get(
+        "/api/damage-logs/:filename",
+        async (req: Request, res: Response) => {
+            try {
+                const { filename } = req.params;
+                const filepath = path.join(DAMAGE_LOGS_DIR, filename);
+                const content = await fsPromises.readFile(filepath, "utf-8");
+                const data = JSON.parse(content);
+                res.json({ code: 0, data });
+            } catch (error) {
+                logger.error("Failed to read damage log:", error);
+                res.status(404).json({ code: -1, msg: "Log not found" });
+            }
+        },
+    );
+
+    app.delete(
+        "/api/damage-logs/:filename",
+        async (req: Request, res: Response) => {
+            try {
+                const { filename } = req.params;
+                const filepath = path.join(DAMAGE_LOGS_DIR, filename);
+                await fsPromises.unlink(filepath);
+                res.json({ code: 0, msg: "Log deleted successfully" });
+            } catch (error) {
+                logger.error("Failed to delete damage log:", error);
+                res.status(500).json({ code: -1, msg: "Failed to delete log" });
+            }
+        },
+    );
+
     app.get("/api/settings", async (req: Request, res: Response) => {
         res.json({ code: 0, data: globalSettings });
     });
@@ -404,16 +542,27 @@ function initializeApi(
         const newSettings = req.body;
         Object.assign(globalSettings, newSettings);
 
-        await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 4), "utf8");
+        await fsPromises.writeFile(
+            SETTINGS_PATH,
+            JSON.stringify(globalSettings, null, 4),
+            "utf8",
+        );
 
         res.json({ code: 0, data: globalSettings });
     });
 
     app.get("/api/translations/:lang", async (req: Request, res: Response) => {
         const { lang } = req.params;
-        const translationPath = process.env.NODE_ENV === 'development' ?
-            path.join(__dirname, "..", "..", "translations", `${lang}.json`) :
-            path.join(__dirname, "translations", `${lang}.json`);
+        const translationPath =
+            process.env.NODE_ENV === "development"
+                ? path.join(
+                      __dirname,
+                      "..",
+                      "..",
+                      "translations",
+                      `${lang}.json`,
+                  )
+                : path.join(__dirname, "translations", `${lang}.json`);
 
         try {
             const data = await fsPromises.readFile(translationPath, "utf8");
@@ -452,19 +601,22 @@ function initializeApi(
         }
 
         globalSettings.language = language;
-        
+
         // Reload translations
         try {
             reloadSkillTranslations(language);
             reloadMonsterTranslations(language);
         } catch (error) {
-            logger.error(`Failed to reload translations for language ${language}:`, error);
+            logger.error(
+                `Failed to reload translations for language ${language}:`,
+                error,
+            );
             return res.status(500).json({
                 code: 1,
                 msg: "Failed to reload translations",
             });
         }
-        
+
         await fsPromises.writeFile(
             SETTINGS_PATH,
             JSON.stringify(globalSettings, null, 4),
@@ -794,7 +946,11 @@ function initializeApi(
 
         socket.on("updateSettings", async (newSettings, callback) => {
             Object.assign(globalSettings, newSettings);
-            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 4), "utf8");
+            await fsPromises.writeFile(
+                SETTINGS_PATH,
+                JSON.stringify(globalSettings, null, 4),
+                "utf8",
+            );
             callback({ code: 0, data: globalSettings });
         });
 
@@ -861,20 +1017,23 @@ function initializeApi(
             }
 
             globalSettings.language = language;
-            
+
             // Reload translations
             try {
                 reloadSkillTranslations(language);
                 reloadMonsterTranslations(language);
             } catch (error) {
-                logger.error(`Failed to reload translations for language ${language}:`, error);
+                logger.error(
+                    `Failed to reload translations for language ${language}:`,
+                    error,
+                );
                 callback({
                     code: 1,
                     msg: "Failed to reload translations",
                 });
                 return;
             }
-            
+
             await fsPromises.writeFile(
                 SETTINGS_PATH,
                 JSON.stringify(globalSettings, null, 4),
@@ -1012,7 +1171,7 @@ function initializeApi(
     });
 
     const updateInterval = globalSettings.updateIntervalMs || 100;
-    
+
     setInterval(() => {
         if (!globalSettings.isPaused) {
             const userData = userDataManager.getAllUsersData();

@@ -1,4 +1,10 @@
-import { type WinDivertHandle, createWindivert, addReceiveListener, LAYERS, FLAGS } from './windivert';
+import {
+    type WinDivertHandle,
+    createWindivert,
+    addReceiveListener,
+    LAYERS,
+    FLAGS,
+} from "./windivert";
 
 export default class WindivertAdapter {
     handle: WinDivertHandle | null;
@@ -17,7 +23,7 @@ export default class WindivertAdapter {
         this.handle = await createWindivert(
             this.filter,
             LAYERS.NETWORK,
-            FLAGS.DEFAULT
+            FLAGS.DEFAULT,
         );
 
         this.handle.open();

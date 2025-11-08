@@ -81,7 +81,10 @@ export function getJSON<T = any>(key: string, defaultValue?: T): T | null {
  * @param value - The value to store
  * @returns true if successful, false otherwise
  */
-export function setItem(key: string, value: string | number | boolean): boolean {
+export function setItem(
+    key: string,
+    value: string | number | boolean,
+): boolean {
     try {
         localStorage.setItem(key, String(value));
         return true;

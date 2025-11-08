@@ -26,7 +26,9 @@ export function DevicePicker(): React.JSX.Element {
                 setLoading(false);
             }
         })();
-        return () => { mounted = false; };
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -98,9 +100,13 @@ export function DevicePicker(): React.JSX.Element {
                     setRestartRequired(true);
                     // If switching to WinDivert, instruct the user to restart as Administrator
                     if (value === "windivert") {
-                        setBackendMessage("Capture backend saved. Please restart the application to apply the new backend. Note: WinDivert requires the application to be started with Administrator privileges — restart the app as an administrator.");
+                        setBackendMessage(
+                            "Capture backend saved. Please restart the application to apply the new backend. Note: WinDivert requires the application to be started with Administrator privileges — restart the app as an administrator.",
+                        );
                     } else {
-                        setBackendMessage("Capture backend saved. Please restart the application to apply the new backend.");
+                        setBackendMessage(
+                            "Capture backend saved. Please restart the application to apply the new backend.",
+                        );
                     }
                 } else {
                     setBackendMessage("Capture backend saved.");
@@ -120,26 +126,91 @@ export function DevicePicker(): React.JSX.Element {
                 <div>Loading devices...</div>
             ) : (
                 <div className="device-list">
-                    {devices.length === 0 && <div className="device-no-devices">No devices found. Ensure Npcap is installed.</div>}
+                    {devices.length === 0 && (
+                        <div className="device-no-devices">
+                            No devices found. Ensure Npcap is installed.
+                        </div>
+                    )}
                     <div style={{ margin: "8px 12px" }}>
                         <div className="device-backend">
-                            <span className="backend-label">Capture Backend:</span>
-                            <BackendDropdown value={backend} onChange={(v) => handleSaveBackend(v)} disabled={savingBackend} />
-                            {savingBackend && <span className="saving-indicator">Saving…</span>}
+                            <span className="backend-label">
+                                Capture Backend:
+                            </span>
+                            <BackendDropdown
+                                value={backend}
+                                onChange={(v) => handleSaveBackend(v)}
+                                disabled={savingBackend}
+                            />
+                            {savingBackend && (
+                                <span className="saving-indicator">
+                                    Saving…
+                                </span>
+                            )}
                         </div>
                         {backendMessage && (
-                            <div className={"alert " + (restartRequired ? "alert-warning" : "alert-success")}>
+                            <div
+                                className={
+                                    "alert " +
+                                    (restartRequired
+                                        ? "alert-warning"
+                                        : "alert-success")
+                                }
+                            >
                                 <div className="alert-icon" aria-hidden>
                                     {restartRequired ? (
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M12 9v4" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            <path d="M12 17h.01" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#b45309" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="rgba(180,69,9,0.06)" />
+                                        <svg
+                                            width="18"
+                                            height="18"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                            <path
+                                                d="M12 9v4"
+                                                stroke="#b45309"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                            <path
+                                                d="M12 17h.01"
+                                                stroke="#b45309"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                            <path
+                                                d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                                                stroke="#b45309"
+                                                strokeWidth="1"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                fill="rgba(180,69,9,0.06)"
+                                            />
                                         </svg>
                                     ) : (
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M9 12l2 2 4-4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            <circle cx="12" cy="12" r="9" stroke="#10b981" strokeWidth="1" fill="rgba(16,185,129,0.06)" />
+                                        <svg
+                                            width="18"
+                                            height="18"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                            <path
+                                                d="M9 12l2 2 4-4"
+                                                stroke="#10b981"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            />
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="9"
+                                                stroke="#10b981"
+                                                strokeWidth="1"
+                                                fill="rgba(16,185,129,0.06)"
+                                            />
                                         </svg>
                                     )}
                                 </div>
@@ -151,15 +222,27 @@ export function DevicePicker(): React.JSX.Element {
                             </div>
                         )}
                     </div>
-                    {backend === "npcap" && devices.map((d) => (
-                        <label key={d.id} className="device-item" onClick={() => handleSave(d.id)}>
-                            <input type="radio" name="device" checked={String(selected) === String(d.id)} onChange={() => handleSave(d.id)} />
-                            <div className="device-meta">
-                                <div className="device-name">{d.description || d.name}</div>
-                                <div className="device-desc">{d.name}</div>
-                            </div>
-                        </label>
-                    ))}
+                    {backend === "npcap" &&
+                        devices.map((d) => (
+                            <label
+                                key={d.id}
+                                className="device-item"
+                                onClick={() => handleSave(d.id)}
+                            >
+                                <input
+                                    type="radio"
+                                    name="device"
+                                    checked={String(selected) === String(d.id)}
+                                    onChange={() => handleSave(d.id)}
+                                />
+                                <div className="device-meta">
+                                    <div className="device-name">
+                                        {d.description || d.name}
+                                    </div>
+                                    <div className="device-desc">{d.name}</div>
+                                </div>
+                            </label>
+                        ))}
                 </div>
             )}
         </div>

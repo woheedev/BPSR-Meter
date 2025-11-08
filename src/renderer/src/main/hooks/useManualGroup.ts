@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { ManualGroupState } from "../../shared/types";
+import type { ManualGroupState } from "@shared/types";
 
 export interface UseManualGroupReturn {
     manualGroupState: ManualGroupState | null;

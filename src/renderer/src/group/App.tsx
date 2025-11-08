@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
     GroupHeader,
     GroupToggle,
@@ -7,12 +7,14 @@ import {
     PlayerRegistrySection,
     ClearGroupButton,
 } from "./components";
-import ResizeHandle from "../shared/components/ResizeHandle";
+import ResizeHandle from "@shared/components/ResizeHandle";
 import { useGroupState, useAvailablePlayers } from "./hooks";
-import { useWindowControls, useSocket } from "../shared/hooks";
+import { useWindowControls, useSocket } from "@shared/hooks";
 import { usePlayerRegistry } from "../main/hooks/usePlayerRegistry";
-import { useTranslations } from "../shared/hooks/useTranslations";
-import { useWindowResize } from "../shared/hooks/useWindowResize";
+import { useTranslations } from "@shared/hooks/useTranslations";
+import { useWindowResize } from "@shared/hooks/useWindowResize";
+import { electron } from "@shared/utils/electron";
+import { getItem, setItem } from "@shared/utils/localStorage";
 
 export function GroupApp(): React.JSX.Element {
     const {
@@ -31,80 +33,68 @@ export function GroupApp(): React.JSX.Element {
 
     const { availablePlayers } = useAvailablePlayers(playerRegistry);
 
-    const { scale, zoomIn, zoomOut, handleDragStart, handleClose, isDragging } =
-        useWindowControls({
-            baseWidth: 480,
-            baseHeight: 530,
-            windowType: "group",
-        });
+    const {
+        scale,
+        zoomIn,
+        zoomOut,
+        handleDragStart,
+        handleClose,
+        isDragging,
+        isLocked,
+    } = useWindowControls({
+        baseWidth: 480,
+        baseHeight: 530,
+        windowType: "group",
+    });
 
     const { handleResizeStart } = useWindowResize("group");
 
-    const handleAddPlayer = useCallback(
-        async (uuid: string) => {
-            await addMember(uuid);
-        },
-        [addMember],
-    );
+    const handleAddPlayer = async (uuid: string) => {
+        await addMember(uuid);
+    };
 
-    const handleRemoveMember = useCallback(
-        async (uuid: string) => {
-            await removeMember(uuid);
-        },
-        [removeMember],
-    );
+    const handleRemoveMember = async (uuid: string) => {
+        await removeMember(uuid);
+    };
 
-    const handleClearGroup = useCallback(async () => {
+    const handleClearGroup = async () => {
         await clearGroup();
-    }, [clearGroup]);
+    };
 
-    const handleSaveToRegistry = useCallback(
-        async (uid: string, name: string) => {
-            const success = await addToRegistry(uid, name);
-            if (success) {
-                console.log(`Player ${name} (${uid}) saved to registry`);
-            }
-        },
-        [addToRegistry],
-    );
+    const handleSaveToRegistry = async (uid: string, name: string) => {
+        const success = await addToRegistry(uid, name);
+        if (success) {
+            console.log(`Player ${name} (${uid}) saved to registry`);
+        }
+    };
 
     useEffect(() => {
-        try {
-            const amount = localStorage.getItem("transparencyAmount") ?? "70";
-            const opacity = parseFloat(amount) / 100;
-            document.documentElement.style.setProperty(
-                "--transparency-amount",
-                opacity.toString(),
-            );
-        } catch (err) {
-            console.warn("Failed to apply transparency amount", err);
-        }
+        const amount = getItem("transparencyAmount") ?? "70";
+        const opacity = parseFloat(amount) / 100;
+        document.documentElement.style.setProperty(
+            "--transparency-amount",
+            opacity.toString(),
+        );
 
-        try {
-            const unsubscribe = window.electron.onTransparencySettingChanged?.(
-                (isDisabled: boolean) => {
-                    document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-                },
-            );
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency listener", err);
-        }
+        const unsubscribe = electron.onTransparencySettingChanged(
+            (isDisabled: boolean) => {
+                document.body.style.backgroundColor = isDisabled
+                    ? "#000"
+                    : "transparent";
+            },
+        );
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        const unsubscribe = window.electron.onTransparencyAmountChanged?.(
+        const unsubscribe = electron.onTransparencyAmountChanged(
             (amount: number) => {
-                try {
-                    const opacity = amount / 100;
-                    document.documentElement.style.setProperty(
-                        "--transparency-amount",
-                        opacity.toString(),
-                    );
-                    localStorage.setItem("transparencyAmount", amount.toString());
-                } catch (err) {
-                    console.warn("Failed to update transparency amount", err);
-                }
+                const opacity = amount / 100;
+                document.documentElement.style.setProperty(
+                    "--transparency-amount",
+                    opacity.toString(),
+                );
+                setItem("transparencyAmount", amount.toString());
             },
         );
 
@@ -114,21 +104,13 @@ export function GroupApp(): React.JSX.Element {
     }, []);
 
     useEffect(() => {
-        try {
-            const enabled = localStorage.getItem("clickthroughEnabled") === "true";
-            window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-        } catch (err) {
-            console.warn("Failed to apply clickthrough setting", err);
-        }
+        const enabled = getItem("clickthroughEnabled") === "true";
+        electron.setIgnoreMouseEvents(enabled, { forward: true });
 
-        const unsubscribe = window.electron.onClickthroughChanged?.(
+        const unsubscribe = electron.onClickthroughChanged(
             (enabled: boolean) => {
-                try {
-                    window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-                    localStorage.setItem("clickthroughEnabled", enabled.toString());
-                } catch (err) {
-                    console.warn("Failed to update clickthrough setting", err);
-                }
+                electron.setIgnoreMouseEvents(enabled, { forward: true });
+                setItem("clickthroughEnabled", enabled.toString());
             },
         );
 
@@ -137,48 +119,43 @@ export function GroupApp(): React.JSX.Element {
         };
     }, []);
 
-    const handleDeleteFromRegistry = useCallback(
-        async (uid: string) => {
-            try {
-                const result = await emitWithResponse({
-                    event: "deleteFromPlayerRegistry",
-                    data: { uid }
-                });
+    const handleDeleteFromRegistry = async (uid: string) => {
+        try {
+            const result = await emitWithResponse({
+                event: "deleteFromPlayerRegistry",
+                data: { uid },
+            });
 
-                if (result.code === 0) {
-                    console.log(`Deleted player from registry: ${uid}`);
-                    await refreshRegistry();
-                }
-            } catch (error) {
-                console.error("Failed to delete player from registry:", error);
+            if (result.code === 0) {
+                console.log(`Deleted player from registry: ${uid}`);
+                await refreshRegistry();
             }
-        },
-        [emitWithResponse, refreshRegistry],
-    );
+        } catch (error) {
+            console.error("Failed to delete player from registry:", error);
+        }
+    };
 
     useEffect(() => {
-        try {
-            const disableTransparency = localStorage.getItem("disableTransparency") === "true";
-            document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
+        const disableTransparency = getItem("disableTransparency") === "true";
+        document.body.style.backgroundColor = disableTransparency
+            ? "#000"
+            : "transparent";
 
-            const performanceMode = localStorage.getItem("performanceMode") === "true";
-            if (performanceMode) {
-                document.body.classList.add("performance-mode");
-            } else {
-                document.body.classList.remove("performance-mode");
-            }
-        } catch (err) {
-            console.warn("Failed to apply transparency setting", err);
+        const performanceMode = getItem("performanceMode") === "true";
+        if (performanceMode) {
+            document.body.classList.add("performance-mode");
+        } else {
+            document.body.classList.remove("performance-mode");
         }
 
-        try {
-            const unsubscribe = window.electron.onTransparencySettingChanged?.((isDisabled: boolean) => {
-                document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-            });
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency listener", err);
-        }
+        const unsubscribe = electron.onTransparencySettingChanged(
+            (isDisabled: boolean) => {
+                document.body.style.backgroundColor = isDisabled
+                    ? "#000"
+                    : "transparent";
+            },
+        );
+        return unsubscribe;
     }, []);
 
     return (
@@ -190,6 +167,7 @@ export function GroupApp(): React.JSX.Element {
                 onDragStart={handleDragStart}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
+                isLocked={isLocked}
                 t={t}
             />
 

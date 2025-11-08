@@ -47,13 +47,20 @@
             "hp": "生命值",
             "direction": "方向",
             "distance": "距离",
+            "ttk": "击杀时间",
             "nextSpawn": "下次刷新",
-            "monsters": "怪物"
+            "monsters": "怪物",
+            "damageBreakdown": "伤害详情",
+            "totalDamageDealt": "总伤害",
+            "noDamageData": "暂无伤害数据",
+            "topContributors": "伤害排名",
+            "skillBreakdown": "技能伤害分布"
         },
         "buttons": {
             "resetStatistics": "重置统计",
             "openGroup": "打开小队管理",
             "openHistory": "打开战斗历史",
+            "openMonsters": "打开怪物窗口",
             "toggleSkillsView": "切换技能分解视图",
             "sortDamage": "按伤害排序",
             "sortDamageTaken": "按承受伤害排序",
@@ -64,6 +71,8 @@
             "decreaseHeight": "减少窗口高度",
             "close": "关闭",
             "columns": "列",
+            "viewDamage": "查看伤害",
+            "viewDetails": "查看",
             "settings": "设置",
             "pauseUpdates": "暂停更新",
             "resumeUpdates": "恢复更新",
@@ -105,7 +114,8 @@
             "settings": "设置",
             "monsters": "怪物",
             "monsterList": "怪物列表",
-            "bossSchedule": "Boss刷新时间表"
+            "bossSchedule": "Boss刷新时间表",
+            "devicePicker": "网络设备"
         },
         "settings": {
             "sections": {

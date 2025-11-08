@@ -47,13 +47,20 @@
             "hp": "HP",
             "direction": "Direction",
             "distance": "Distance",
+            "ttk": "TTK",
             "nextSpawn": "Next Spawn",
-            "monsters": "Monsters"
+            "monsters": "Monsters",
+            "damageBreakdown": "Damage Breakdown",
+            "totalDamageDealt": "Total Damage Dealt",
+            "noDamageData": "No damage data available",
+            "topContributors": "Top Contributors",
+            "skillBreakdown": "Skill Breakdown"
         },
         "buttons": {
             "resetStatistics": "Reset statistics",
             "openGroup": "Open group management",
             "openHistory": "Open combat history",
+            "openMonsters": "Open monsters window",
             "toggleSkillsView": "Toggle skills breakdown view",
             "sortDamage": "Sort by damage",
             "sortDamageTaken": "Sort by damage taken",
@@ -64,6 +71,8 @@
             "decreaseHeight": "Decrease window height",
             "close": "Close",
             "columns": "Columns",
+            "viewDamage": "View Damage",
+            "viewDetails": "View",
             "settings": "Settings",
             "pauseUpdates": "Pause updates",
             "resumeUpdates": "Resume updates",
@@ -105,7 +114,8 @@
             "settings": "Settings",
             "monsters": "Monsters",
             "monsterList": "Monster List",
-            "bossSchedule": "Boss Schedule"
+            "bossSchedule": "Boss Schedule",
+            "devicePicker": "Network Device"
         },
         "settings": {
             "sections": {

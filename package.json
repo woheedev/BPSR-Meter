@@ -1,6 +1,6 @@
 {
     "name": "bpsr-meter",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "description": "BPSR Meter",
     "author": "Denoder",
     "type": "module",
@@ -42,8 +42,7 @@
         "rollup-plugin-copy": "^3.5.0",
         "socket.io": "^4.8.1",
         "socket.io-client": "^4.8.1",
-        "tailwindcss": "^4.1.15",
-        "winston": "^3.17.0"
+        "tailwindcss": "^4.1.15"
     },
     "devDependencies": {
         "@types/bindings": "^1.5.5",
@@ -55,6 +54,7 @@
         "@types/react-dom": "^19.2.2",
         "@vitejs/plugin-react": "^5.0.4",
         "@yao-pkg/pkg": "^6.6.0",
+        "babel-plugin-react-compiler": "^1.0.0",
         "chokidar": "^4.0.1",
         "concurrently": "^9.1.2",
         "electron": "^39.0.0",
@@ -82,6 +82,13 @@
     "build": {
         "appId": "com.bpsr.meter",
         "productName": "BPSR Meter",
+        "asar": true,
+        "asarUnpack": [
+            "**/*.node",
+            "**/*.dll",
+            "**/*.sys"
+        ],
+        "compression": "maximum",
         "files": [
             "out/**/*",
             "algo/**/*",
@@ -89,14 +96,23 @@
             "settings.json",
             "users.json",
             "icon.ico",
-            "icon.png"
+            "icon.png",
+            "!**/*.map",
+            "!**/*.d.ts",
+            "!**/README.md",
+            "!**/LICENSE"
         ],
         "extraResources": [
             {
                 "from": "node_modules/cap/",
                 "to": "cap/",
                 "filter": [
-                    "**/*"
+                    "**/*.node",
+                    "**/*.dll",
+                    "**/*.sys",
+                    "!**/build/",
+                    "!**/deps/",
+                    "!**/test/"
                 ]
             }
         ],

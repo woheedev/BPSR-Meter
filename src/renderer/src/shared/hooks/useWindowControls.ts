@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { setItem } from "../../shared/utils/localStorage";
+import { setItem } from "@shared/utils/localStorage";
+import { electron } from "@shared/utils/electron";
 
 export interface UseWindowControlsOptions {
     baseWidth: number;
     baseHeight: number;
-    windowType: "main" | "group" | "history" | "device" | "settings" | "monsters";
+    windowType:
+        | "main"
+        | "group"
+        | "history"
+        | "device"
+        | "settings"
+        | "monsters";
 }
 
 export interface UseWindowControlsReturn {
@@ -39,8 +46,9 @@ export function useWindowControls(
     useEffect(() => {
         const loadSavedScale = async () => {
             try {
-                const savedSizes = await window.electron.getSavedWindowSizes();
-                const savedScale = savedSizes[windowType]?.scale;
+                const savedSizes =
+                    await electron.getSavedWindowSize(windowType);
+                const savedScale = savedSizes?.scale;
 
                 if (savedScale) {
                     setScale(savedScale);
@@ -75,7 +83,7 @@ export function useWindowControls(
 
             setTimeout(() => {
                 setItem(`${windowType}.scale`, clampedScale);
-                window.electron.saveWindowSize(
+                electron.saveWindowSize(
                     windowType,
                     undefined,
                     undefined,
@@ -100,7 +108,7 @@ export function useWindowControls(
 
         const startX = e.screenX;
         const startY = e.screenY;
-        const position = await window.electron.getWindowPosition();
+        const position = await electron.getWindowPosition();
 
         dragStateRef.current = {
             startX,
@@ -114,30 +122,29 @@ export function useWindowControls(
 
     // Setup lock state listener
     useEffect(() => {
-        window.electron.setIgnoreMouseEvents(false);
+        electron.setIgnoreMouseEvents(false);
         currentMouseEventsStateRef.current = false;
 
-        window.electron.onLockStateChanged((locked: boolean) => {
+        electron.onLockStateChanged((locked: boolean) => {
             setIsLocked(locked);
             updateClickThroughState(locked, currentMouseEventsStateRef);
         });
     }, []);
 
     const toggleLock = useCallback(() => {
-        window.electron.toggleLockState();
+        electron.toggleLockState();
     }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging || !dragStateRef.current)
-                return;
+            if (!isDragging || !dragStateRef.current) return;
 
             const deltaX = e.screenX - dragStateRef.current.startX;
             const deltaY = e.screenY - dragStateRef.current.startY;
             const newX = dragStateRef.current.startWindowX + deltaX;
             const newY = dragStateRef.current.startWindowY + deltaY;
 
-            window.electron.setWindowPosition(windowType, newX, newY);
+            electron.setWindowPosition(windowType, newX, newY);
         };
 
         const handleMouseUp = () => {
@@ -149,15 +156,14 @@ export function useWindowControls(
         };
 
         const handlePointerMove = (e: PointerEvent) => {
-            if (!isDragging || !dragStateRef.current)
-                return;
+            if (!isDragging || !dragStateRef.current) return;
 
             const deltaX = e.screenX - dragStateRef.current.startX;
             const deltaY = e.screenY - dragStateRef.current.startY;
             const newX = dragStateRef.current.startWindowX + deltaX;
             const newY = dragStateRef.current.startWindowY + deltaY;
 
-            window.electron.setWindowPosition(windowType, newX, newY);
+            electron.setWindowPosition(windowType, newX, newY);
         };
 
         const handlePointerUp = (e: PointerEvent) => {
@@ -186,7 +192,8 @@ export function useWindowControls(
         (e: React.MouseEvent) => {
             if (!isLocked) return;
 
-            const isLockButton = (e.target as Element).closest("#lock-button") !== null;
+            const isLockButton =
+                (e.target as Element).closest("#lock-button") !== null;
 
             if (isLockButton) {
                 enableMouseEvents(currentMouseEventsStateRef);
@@ -200,7 +207,8 @@ export function useWindowControls(
             if (!isLocked) return;
 
             const relatedTarget = e.relatedTarget as Element | null;
-            const isLeavingLockButton = relatedTarget?.closest("#lock-button") === null;
+            const isLeavingLockButton =
+                relatedTarget?.closest("#lock-button") === null;
 
             if (isLeavingLockButton) {
                 setTimeout(() => {
@@ -212,7 +220,7 @@ export function useWindowControls(
     );
 
     const handleClose = useCallback(() => {
-        window.electron.closeWindow();
+        electron.closeWindow();
     }, []);
 
     return {
@@ -234,11 +242,11 @@ function updateClickThroughState(
     mouseEventsStateRef: React.RefObject<boolean>,
 ): void {
     if (locked) {
-        window.electron.setIgnoreMouseEvents(true, { forward: true });
+        electron.setIgnoreMouseEvents(true, { forward: true });
         mouseEventsStateRef.current = true;
         console.log("Locked mode: click-through ENABLED");
     } else {
-        window.electron.setIgnoreMouseEvents(false);
+        electron.setIgnoreMouseEvents(false);
         mouseEventsStateRef.current = false;
         console.log("Unlocked mode: Mouse events ENABLED (fully interactive)");
     }
@@ -248,7 +256,7 @@ function enableMouseEvents(
     mouseEventsStateRef: React.RefObject<boolean>,
 ): void {
     if (mouseEventsStateRef.current) {
-        window.electron.setIgnoreMouseEvents(false);
+        electron.setIgnoreMouseEvents(false);
         mouseEventsStateRef.current = false;
         console.log("Mouse events ENABLED");
     }
@@ -258,7 +266,7 @@ function disableMouseEvents(
     mouseEventsStateRef: React.RefObject<boolean>,
 ): void {
     if (!mouseEventsStateRef.current) {
-        window.electron.setIgnoreMouseEvents(true, { forward: true });
+        electron.setIgnoreMouseEvents(true, { forward: true });
         mouseEventsStateRef.current = true;
         console.log("Mouse events DISABLED (click-through)");
     }

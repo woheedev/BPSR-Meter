@@ -9,7 +9,8 @@ export interface UseHistorySettingsReturn {
 }
 
 export function useHistorySettings(): UseHistorySettingsReturn {
-    const [isHistorySavingEnabled, setIsHistorySavingEnabled] = useState<boolean>(false);
+    const [isHistorySavingEnabled, setIsHistorySavingEnabled] =
+        useState<boolean>(false);
     const [saveOnLineSwitch, setSaveOnLineSwitch] = useState<boolean>(true);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 

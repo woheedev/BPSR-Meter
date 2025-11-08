@@ -1,8 +1,14 @@
-import { HeaderReader as DecodersHeaderReader, BYTESWAP16 as DecodersBYTESWAP16 } from './decoders';
-import path from 'path';
+import {
+    HeaderReader as DecodersHeaderReader,
+    BYTESWAP16 as DecodersBYTESWAP16,
+} from "./decoders";
+import path from "path";
 
-const RESOURCES_PATH = process.env.NODE_ENV === 'development' ? process.cwd() : process.env.resourcesPath;
-const bindingPath = path.join(RESOURCES_PATH, 'build/Release/windivert.node');
+const RESOURCES_PATH =
+    process.env.NODE_ENV === "development"
+        ? process.cwd()
+        : process.env.resourcesPath;
+const bindingPath = path.join(RESOURCES_PATH, "build/Release/windivert.node");
 const module = { exports: {} };
 process.dlopen(module, bindingPath);
 const windivert = module.exports;
@@ -12,9 +18,21 @@ export interface WinDivertHandle {
     recv(cb: (packet: Buffer, addr: Buffer) => void): void;
     send(obj: { packet: Buffer; addr: Buffer }): boolean;
     close(): boolean;
-    HelperCalcChecksums(packetObj: { packet: Buffer }, flags: number): { UDPChecksum?: number; TCPChecksum?: number; IPChecksum?: number } | null;
-    sendEx(obj: { packet: Buffer; addr: Buffer }, flags?: number): { sent: boolean; sendLen: number } | any;
-    recvEx(flags?: number): { packet: Buffer; addr: Buffer; recvLen: number } | any;
+    HelperCalcChecksums(
+        packetObj: { packet: Buffer },
+        flags: number,
+    ): {
+        UDPChecksum?: number;
+        TCPChecksum?: number;
+        IPChecksum?: number;
+    } | null;
+    sendEx(
+        obj: { packet: Buffer; addr: Buffer },
+        flags?: number,
+    ): { sent: boolean; sendLen: number } | any;
+    recvEx(
+        flags?: number,
+    ): { packet: Buffer; addr: Buffer; recvLen: number } | any;
     shutdown(how: number): boolean;
     setParam(param: number, value: number): boolean;
     getParam(param: number): number;
@@ -106,24 +124,31 @@ export const PARAM_DEFAULTS = Object.freeze({
 });
 
 export const MISC = Object.freeze({
-    BATCH_MAX: 0xFF,
-    MTU_MAX: 40 + 0xFFFF, // 65575
+    BATCH_MAX: 0xff,
+    MTU_MAX: 40 + 0xffff, // 65575
 });
 
 export async function checkAdmin(): Promise<void> {
-    const mod = await import('is-admin');
-    if (!await mod.default()) {
-        throw new Error('You must run this application as an administrator.');
+    const mod = await import("is-admin");
+    if (!(await mod.default())) {
+        throw new Error("You must run this application as an administrator.");
     }
 }
 
-export async function createWindivert(filter: string, layer?: number, flag?: number): Promise<any> {
+export async function createWindivert(
+    filter: string,
+    layer?: number,
+    flag?: number,
+): Promise<any> {
     await checkAdmin();
     // @ts-ignore
     return new wd.WinDivert(filter, layer, flag);
 }
 
-export function addReceiveListener(handle: WinDivertHandle, callback: (packet: Buffer, addr: any) => Buffer | void) {
+export function addReceiveListener(
+    handle: WinDivertHandle,
+    callback: (packet: Buffer, addr: any) => Buffer | void,
+) {
     try {
         handle.recv(function (packet: Buffer, addr: Buffer) {
             const newPacket = callback(packet, addr);
@@ -132,7 +157,7 @@ export function addReceiveListener(handle: WinDivertHandle, callback: (packet: B
                     handle.HelperCalcChecksums({ packet: newPacket }, 0);
                     handle.send({ packet: newPacket, addr });
                 } catch (error) {
-                    console.error('Recv Error:', error);
+                    console.error("Recv Error:", error);
                 }
             } else if (newPacket === undefined) {
                 handle.send({ packet, addr });
@@ -143,7 +168,12 @@ export function addReceiveListener(handle: WinDivertHandle, callback: (packet: B
     }
 }
 
-export function sendEx(handle: WinDivertHandle, packetBuffer: Buffer, addrBuffer: Buffer, flags = 0) {
+export function sendEx(
+    handle: WinDivertHandle,
+    packetBuffer: Buffer,
+    addrBuffer: Buffer,
+    flags = 0,
+) {
     return handle.sendEx({ packet: packetBuffer, addr: addrBuffer }, flags);
 }
 
@@ -155,7 +185,11 @@ export function shutdown(handle: WinDivertHandle, how: number) {
     return handle.shutdown(how);
 }
 
-export function setParam(handle: WinDivertHandle, param: number, value: number) {
+export function setParam(
+    handle: WinDivertHandle,
+    param: number,
+    value: number,
+) {
     return handle.setParam(param, value);
 }
 
@@ -179,7 +213,11 @@ export function formatIPv6Address(handle: WinDivertHandle, addrBuffer: Buffer) {
     return handle.HelperFormatIPv6Address(addrBuffer);
 }
 
-export function hashPacket(handle: WinDivertHandle, packetBuffer: Buffer, seed = 0) {
+export function hashPacket(
+    handle: WinDivertHandle,
+    packetBuffer: Buffer,
+    seed = 0,
+) {
     return handle.HelperHashPacket(packetBuffer, seed);
 }
 

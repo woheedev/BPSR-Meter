@@ -38,17 +38,21 @@ function compareVersions(v1: string, v2: string): number {
 /**
  * Checks GitHub releases for updates
  */
-export async function checkForUpdates(currentVersion: string): Promise<UpdateInfo> {
+export async function checkForUpdates(
+    currentVersion: string,
+): Promise<UpdateInfo> {
     try {
         const response = await fetch(GITHUB_API_URL, {
             headers: {
-                "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "BPSR-Meter"
-            }
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "BPSR-Meter",
+            },
         });
 
         if (!response.ok) {
-            throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+            throw new Error(
+                `GitHub API returned ${response.status}: ${response.statusText}`,
+            );
         }
 
         const release = await response.json();
@@ -57,10 +61,11 @@ export async function checkForUpdates(currentVersion: string): Promise<UpdateInf
 
         const isNewer = compareVersions(latestVersion, cleanCurrentVersion) > 0;
 
-        const asset = release.assets?.find((a: any) => 
-            a.name.endsWith(".zip") && 
-            a.name.includes("windows-x64") && 
-            !a.name.endsWith(".sha256")
+        const asset = release.assets?.find(
+            (a: any) =>
+                a.name.endsWith(".zip") &&
+                a.name.includes("windows-x64") &&
+                !a.name.endsWith(".sha256"),
         );
 
         return {
@@ -68,7 +73,7 @@ export async function checkForUpdates(currentVersion: string): Promise<UpdateInf
             currentVersion: cleanCurrentVersion,
             latestVersion: latestVersion,
             downloadUrl: asset?.browser_download_url || release.html_url,
-            releaseNotes: release.body
+            releaseNotes: release.body,
         };
     } catch (error) {
         console.error("Failed to check for updates:", error);
@@ -76,7 +81,7 @@ export async function checkForUpdates(currentVersion: string): Promise<UpdateInf
             available: false,
             currentVersion,
             latestVersion: currentVersion,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
         };
     }
 }
@@ -85,7 +90,8 @@ export async function checkForUpdates(currentVersion: string): Promise<UpdateInf
  * Shows an update dialog to the user
  */
 export async function showUpdateDialog(updateInfo: UpdateInfo): Promise<void> {
-    const { latestVersion, currentVersion, downloadUrl, releaseNotes } = updateInfo;
+    const { latestVersion, currentVersion, downloadUrl, releaseNotes } =
+        updateInfo;
 
     const message = `A new version of BPSR Meter is available!\n\nCurrent version: ${currentVersion}\nLatest version: ${latestVersion}\n\n${releaseNotes ? `Release notes:\n${releaseNotes.substring(0, 300)}${releaseNotes.length > 300 ? "..." : ""}` : ""}`;
 
@@ -96,7 +102,7 @@ export async function showUpdateDialog(updateInfo: UpdateInfo): Promise<void> {
         detail: message,
         buttons: ["Download Update", "Remind Me Later"],
         defaultId: 0,
-        cancelId: 1
+        cancelId: 1,
     });
 
     if (response.response === 0 && downloadUrl) {
@@ -107,12 +113,14 @@ export async function showUpdateDialog(updateInfo: UpdateInfo): Promise<void> {
 /**
  * Checks for updates silently (no dialog if no update available)
  */
-export async function checkForUpdatesSilent(currentVersion: string): Promise<UpdateInfo> {
+export async function checkForUpdatesSilent(
+    currentVersion: string,
+): Promise<UpdateInfo> {
     const updateInfo = await checkForUpdates(currentVersion);
-    
+
     if (updateInfo.available) {
         await showUpdateDialog(updateInfo);
     }
-    
+
     return updateInfo;
 }

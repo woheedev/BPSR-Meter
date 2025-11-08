@@ -6,10 +6,14 @@ import type { Logger, GlobalSettings, SkillConfig } from "../types/index";
 import type { Server as SocketIOServer } from "socket.io";
 
 const TRANSLATIONS_DIR = path.join(__dirname, "translations");
-let skillConfig: SkillConfig = JSON.parse(readFileSync(TRANSLATIONS_DIR + "/en.json", "utf-8")).skills;
+let skillConfig: SkillConfig = JSON.parse(
+    readFileSync(TRANSLATIONS_DIR + "/en.json", "utf-8"),
+).skills;
 
 export function reloadSkillTranslations(language: string): void {
-    skillConfig = JSON.parse(readFileSync(path.join(TRANSLATIONS_DIR, `${language}.json`), "utf-8")).skills;
+    skillConfig = JSON.parse(
+        readFileSync(path.join(TRANSLATIONS_DIR, `${language}.json`), "utf-8"),
+    ).skills;
 }
 
 export function getSkillConfig(): SkillConfig {
@@ -228,7 +232,7 @@ export class StatisticData {
         }
         const totalPerSecond =
             (this.stats.total / (this.timeRange[1] - this.timeRange[0])) *
-            1000 || 0;
+                1000 || 0;
         if (!Number.isFinite(totalPerSecond)) return 0;
         return totalPerSecond;
     }
@@ -436,10 +440,15 @@ export class UserData {
         for (const [skillId, stat] of this.skillUsage) {
             const critCount = stat.count.critical;
             const luckyCount = stat.count.lucky;
-            const critRate = stat.count.total > 0 ? critCount / stat.count.total : 0;
-            const luckyRate = stat.count.total > 0 ? luckyCount / stat.count.total : 0;
+            const critRate =
+                stat.count.total > 0 ? critCount / stat.count.total : 0;
+            const luckyRate =
+                stat.count.total > 0 ? luckyCount / stat.count.total : 0;
             const skillConfigEntry = currentSkillConfig[skillId % 1000000000];
-            const name = typeof skillConfigEntry === "string" ? skillConfigEntry : (skillConfigEntry?.name ?? skillId % 1000000000);
+            const name =
+                typeof skillConfigEntry === "string"
+                    ? skillConfigEntry
+                    : (skillConfigEntry?.name ?? skillId % 1000000000);
             const elementype = stat.element;
 
             skills[skillId % 1000000000] = {
@@ -500,13 +509,20 @@ interface CachedUserData {
 }
 
 interface EnemyCache {
-    name: Map<string, string>;
-    hp: Map<string, number>;
-    maxHp: Map<string, number>;
-    monsterId: Map<string, number>;
-    lastSeen: Map<string, number>;
-    position: Map<string | number, { x: number; y: number; z: number; }>;
-    isDead: Map<string, boolean>;
+    name: Map<number, string>;
+    hp: Map<number, number>;
+    maxHp: Map<number, number>;
+    monsterId: Map<number, number>;
+    lastSeen: Map<number, number>;
+    position: Map<number, { x: number; y: number; z: number }>;
+    isDead: Map<number, boolean>;
+    damageDealt: Map<number, number>;
+    firstHitTime: Map<number, number>;
+    deathTime: Map<number, number>;
+    playerDamage: Map<
+        number,
+        Map<number, { damage: number; skills: Map<number, number> }>
+    >;
 }
 
 interface PlayerPosition {
@@ -537,7 +553,11 @@ export class UserDataManager {
     lastLogTime?: number;
     sceneData: Map<string, SceneInfo>;
 
-    constructor(logger: Logger, globalSettings: GlobalSettings, io?: SocketIOServer) {
+    constructor(
+        logger: Logger,
+        globalSettings: GlobalSettings,
+        io?: SocketIOServer,
+    ) {
         this.logger = logger;
         this.globalSettings = globalSettings;
         this.io = io;
@@ -556,6 +576,10 @@ export class UserDataManager {
             lastSeen: new Map(),
             position: new Map(),
             isDead: new Map(),
+            damageDealt: new Map(),
+            firstHitTime: new Map(),
+            deathTime: new Map(),
+            playerDamage: new Map(),
         };
         this.sceneData = new Map();
         this.localPlayerUid = null;
@@ -568,11 +592,19 @@ export class UserDataManager {
         }
     }
 
-    setLocalPlayerPosition(position: { x: number; y: number; z: number }): void {
+    setLocalPlayerPosition(position: {
+        x: number;
+        y: number;
+        z: number;
+    }): void {
         this.localPlayerPosition = position;
     }
 
-    calculateDistance(enemyPosition: { x: number; y: number; z: number }): number | null {
+    calculateDistance(enemyPosition: {
+        x: number;
+        y: number;
+        z: number;
+    }): number | null {
         if (!this.localPlayerPosition) return null;
 
         const dx = enemyPosition.x - this.localPlayerPosition.x;
@@ -588,7 +620,11 @@ export class UserDataManager {
      * @param enemyPosition The position of the enemy.
      * @returns string | null
      */
-    calculateDirection(enemyPosition: { x: number; y: number; z: number }): string | null {
+    calculateDirection(enemyPosition: {
+        x: number;
+        y: number;
+        z: number;
+    }): string | null {
         if (!this.localPlayerPosition) return null;
 
         const dx = enemyPosition.x - this.localPlayerPosition.x;
@@ -624,7 +660,7 @@ export class UserDataManager {
         }
     }
 
-    async initialize(): Promise<void> { }
+    async initialize(): Promise<void> {}
 
     getUser(uid: number): UserData {
         if (!this.users.has(uid)) {
@@ -688,6 +724,10 @@ export class UserDataManager {
             isCauseLucky,
             hpLessenValue,
         );
+
+        if (targetUid !== undefined) {
+            this.addMonsterDamage(targetUid, damage, uid, skillId);
+        }
     }
 
     addHealing(
@@ -723,7 +763,11 @@ export class UserDataManager {
     async addLog(log: string): Promise<void> {
         if (!this.globalSettings.enableFightLog) return;
 
-        const logDir = path.join(process.env.USER_DATA_PATH, "logs", String(this.startTime));
+        const logDir = path.join(
+            process.env.USER_DATA_PATH,
+            "logs",
+            String(this.startTime),
+        );
         const logFile = path.join(logDir, "fight.log");
         const timestamp = new Date().toISOString();
         const logEntry = `[${timestamp}] ${log}\n`;
@@ -771,7 +815,6 @@ export class UserDataManager {
     }
 
     getCurrentLineId(): number {
-        // Try to get line ID from local player first
         if (this.localPlayerUid !== null) {
             const sceneInfo = this.sceneData.get(String(this.localPlayerUid));
             if (sceneInfo?.LineId) {
@@ -779,15 +822,14 @@ export class UserDataManager {
             }
         }
 
-        // Fallback: get from any player with scene data
         for (const [uid, sceneInfo] of this.sceneData.entries()) {
             if (sceneInfo?.LineId) {
                 return sceneInfo.LineId;
             }
         }
 
-        // Final fallback: default to 1
-        return 1;
+        // Final fallback: default to 0
+        return 0;
     }
 
     setFightPoint(uid: number, fightPoint: number): void {
@@ -816,7 +858,9 @@ export class UserDataManager {
         return {
             uid: user.uid,
             name: user.name,
-            profession: user.profession + (user.subProfession ? `-${user.subProfession}` : ""),
+            profession:
+                user.profession +
+                (user.subProfession ? `-${user.subProfession}` : ""),
             skills: user.getSkillSummary(),
             attr: user.attr,
         };
@@ -867,17 +911,42 @@ export class UserDataManager {
 
             const position = this.enemyCache.position.get(id);
             const distance = position ? this.calculateDistance(position) : null;
-            const direction = position ? this.calculateDirection(position) : null;
+            const direction = position
+                ? this.calculateDirection(position)
+                : null;
+
+            const monsterName = this.enemyCache.name.get(id);
+            const maxHp = this.enemyCache.maxHp.get(id);
+
+            let ttk: number | null = null;
+            const damageDealt = this.enemyCache.damageDealt.get(id) || 0;
+            const firstHitTime = this.enemyCache.firstHitTime.get(id);
+            const deathTime = this.enemyCache.deathTime.get(id);
+            const currentHp = hpVal ?? 0;
+
+            if (damageDealt > 0 && firstHitTime && maxHp && maxHp > 0) {
+                if (currentHp > 0) {
+                    const timeInCombat = (Date.now() - firstHitTime) / 1000;
+                    if (timeInCombat > 0) {
+                        ttk = timeInCombat;
+                    }
+                } else if (currentHp <= 0 && deathTime) {
+                    ttk = (deathTime - firstHitTime) / 1000;
+                }
+            }
 
             result[id] = {
-                name: this.enemyCache.name.get(id),
+                name: monsterName,
                 hp: hpVal,
-                max_hp: this.enemyCache.maxHp.get(id),
+                max_hp: maxHp,
                 monster_id: this.enemyCache.monsterId.get(id) ?? null,
                 last_seen: this.enemyCache.lastSeen.get(id) ?? null,
-                position: position ? { x: position.x, y: position.y, z: position.z } : null,
+                position: position
+                    ? { x: position.x, y: position.y, z: position.z }
+                    : null,
                 distance: distance,
                 direction: direction,
+                ttk: ttk,
             };
         });
         return result;
@@ -891,10 +960,130 @@ export class UserDataManager {
         this.enemyCache.lastSeen.clear();
         this.enemyCache.position.clear();
         this.enemyCache.isDead.clear();
+        this.enemyCache.damageDealt.clear();
+        this.enemyCache.firstHitTime.clear();
+        this.enemyCache.deathTime.clear();
+        this.enemyCache.playerDamage.clear();
+    }
+
+    getMonsterDamageBreakdown(monsterId: number): any {
+        const playerDamageMap = this.enemyCache.playerDamage.get(monsterId);
+        if (!playerDamageMap) {
+            return {
+                totalDamage: 0,
+                players: [],
+                ttk: null,
+            };
+        }
+
+        const totalDamage = this.enemyCache.damageDealt.get(monsterId) || 0;
+        const players: any[] = [];
+
+        playerDamageMap.forEach((playerData, playerUid) => {
+            const user = this.users.get(playerUid);
+            const skillBreakdown: any[] = [];
+
+            playerData.skills.forEach((damage, skillId) => {
+                skillBreakdown.push({
+                    skillId,
+                    damage,
+                    percentage:
+                        totalDamage > 0 ? (damage / totalDamage) * 100 : 0,
+                });
+            });
+
+            skillBreakdown.sort((a, b) => b.damage - a.damage);
+
+            players.push({
+                uid: playerUid,
+                name: user?.name || `Player ${playerUid}`,
+                damage: playerData.damage,
+                percentage:
+                    totalDamage > 0
+                        ? (playerData.damage / totalDamage) * 100
+                        : 0,
+                skills: skillBreakdown,
+            });
+        });
+
+        players.sort((a, b) => b.damage - a.damage);
+
+        let ttk: number | null = null;
+        const firstHitTime = this.enemyCache.firstHitTime.get(monsterId);
+        const deathTime = this.enemyCache.deathTime.get(monsterId);
+        const currentHp = this.enemyCache.hp.get(monsterId) ?? 0;
+        const maxHp = this.enemyCache.maxHp.get(monsterId);
+
+        // Only calculate TTK if we have valid combat data and know the max HP
+        if (totalDamage > 0 && firstHitTime && maxHp && maxHp > 0) {
+            if (currentHp > 0) {
+                // Enemy is alive - show time elapsed in combat (counts up)
+                const timeInCombat = (Date.now() - firstHitTime) / 1000;
+                if (timeInCombat > 0) {
+                    ttk = timeInCombat;
+                }
+            } else if (currentHp <= 0 && deathTime) {
+                // Enemy is dead - show frozen time it took to kill (from first hit to death)
+                ttk = (deathTime - firstHitTime) / 1000;
+            }
+        }
+
+        return {
+            monsterId,
+            monsterName: this.enemyCache.name.get(monsterId),
+            totalDamage,
+            players,
+            ttk,
+        };
+    }
+
+    addMonsterDamage(
+        monsterUid: number,
+        damage: number,
+        playerUid?: number,
+        skillId?: number,
+    ): void {
+        const monsterKey = monsterUid;
+        const currentDamage = this.enemyCache.damageDealt.get(monsterKey) || 0;
+        this.enemyCache.damageDealt.set(monsterKey, currentDamage + damage);
+
+        // Only set firstHitTime if we have max HP data (to avoid TTK starting from unknown state)
+        const hasMaxHp =
+            this.enemyCache.maxHp.has(monsterKey) &&
+            (this.enemyCache.maxHp.get(monsterKey) || 0) > 0;
+        if (!this.enemyCache.firstHitTime.has(monsterKey) && hasMaxHp) {
+            this.enemyCache.firstHitTime.set(monsterKey, Date.now());
+        }
+
+        if (playerUid !== undefined) {
+            if (!this.enemyCache.playerDamage.has(monsterKey)) {
+                this.enemyCache.playerDamage.set(monsterKey, new Map());
+            }
+
+            const playerDamageMap =
+                this.enemyCache.playerDamage.get(monsterKey)!;
+
+            if (!playerDamageMap.has(playerUid)) {
+                playerDamageMap.set(playerUid, {
+                    damage: 0,
+                    skills: new Map(),
+                });
+            }
+
+            const playerData = playerDamageMap.get(playerUid)!;
+            playerData.damage += damage;
+
+            // Track damage per skill
+            if (skillId !== undefined) {
+                const currentSkillDamage = playerData.skills.get(skillId) || 0;
+                playerData.skills.set(skillId, currentSkillDamage + damage);
+            }
+        }
     }
 
     async clearAll(isLineSwitch: boolean = false): Promise<void> {
-        const shouldSave = this.users.size > 0 &&
+        const shouldSave =
+            this.users.size > 0 &&
             this.globalSettings.enableHistorySave &&
             (!isLineSwitch || this.globalSettings.saveOnLineSwitch !== false);
 
@@ -936,7 +1125,11 @@ export class UserDataManager {
             const endTime = Date.now();
             const users = usersToSave || this.users;
             const timestamp = startTime || this.startTime;
-            const logDir = path.join(process.env.USER_DATA_PATH, "logs", String(timestamp));
+            const logDir = path.join(
+                process.env.USER_DATA_PATH,
+                "logs",
+                String(timestamp),
+            );
             const usersDir = path.join(logDir, "users");
             const summary = {
                 startTime: timestamp,
@@ -995,7 +1188,7 @@ export class UserDataManager {
                 `Saved data for ${summary.userCount} users to ${logDir}`,
             );
 
-            this.io?.emit('historyUpdated', { timestamp: this.startTime });
+            this.io?.emit("historyUpdated", { timestamp: this.startTime });
         } catch (error) {
             this.logger.error("Failed to save all user data:", error);
             throw error;
@@ -1006,7 +1199,8 @@ export class UserDataManager {
         if (!this.globalSettings.autoClearOnTimeout || this.users.size === 0)
             return;
         const currentTime = Date.now();
-        const timeoutMs = (this.globalSettings.autoClearTimeoutSeconds || 20) * 1000;
+        const timeoutMs =
+            (this.globalSettings.autoClearTimeoutSeconds || 20) * 1000;
         if (this.lastLogTime && currentTime - this.lastLogTime > timeoutMs) {
             this.clearAll();
             this.logger.info("Timeout reached, statistics cleared!");

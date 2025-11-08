@@ -7,14 +7,20 @@ import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import zlib from "zlib";
 import type { GlobalSettings, PlayerRegistry } from "../../src/types/index";
-import { UserDataManager, reloadSkillTranslations } from "../../src/server/dataManager";
+import {
+    UserDataManager,
+    reloadSkillTranslations,
+} from "../../src/server/dataManager";
 import { reloadMonsterTranslations } from "../../algo/packet";
 import Sniffer from "../../src/server/sniffer";
 import initializeApi from "../../src/server/api";
 import PacketProcessor from "../../algo/packet";
 
 const SETTINGS_PATH = path.join(process.env.USER_DATA_PATH, "settings.json");
-const PLAYER_REGISTRY_PATH = path.join(process.env.USER_DATA_PATH, "player_registry.json");
+const PLAYER_REGISTRY_PATH = path.join(
+    process.env.USER_DATA_PATH,
+    "player_registry.json",
+);
 
 const globalSettings: GlobalSettings = {
     availableLanguages: ["en", "zh"],

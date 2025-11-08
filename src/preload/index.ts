@@ -1,28 +1,41 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 
-type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+type WindowType =
+    | "main"
+    | "group"
+    | "history"
+    | "device"
+    | "settings"
+    | "monsters";
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld("electron", {
     closeWindow: () => ipcRenderer.send("close-window"),
     toggleLockState: () => ipcRenderer.send("toggle-lock-state"),
     onLockStateChanged: (callback: (isLocked: boolean) => void) => {
-        const listener = (_event: IpcRendererEvent, isLocked: boolean) => callback(isLocked);
+        const listener = (_event: IpcRendererEvent, isLocked: boolean) =>
+            callback(isLocked);
         ipcRenderer.on("lock-state-changed", listener);
         return () => ipcRenderer.removeListener("lock-state-changed", listener);
     },
-    setIgnoreMouseEvents: (ignore: boolean, options?: { forward: boolean }) => ipcRenderer.send("set-ignore-mouse-events", ignore, options),
+    setIgnoreMouseEvents: (ignore: boolean, options?: { forward: boolean }) =>
+        ipcRenderer.send("set-ignore-mouse-events", ignore, options),
     getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
-    setWindowPosition: (windowType: WindowType, x: number, y: number) => ipcRenderer.send("set-window-position", windowType, x, y),
-    resizeWindow: (windowType: WindowType, width: number, height: number) => ipcRenderer.send("resize-window", windowType, width, height),
+    setWindowPosition: (windowType: WindowType, x: number, y: number) =>
+        ipcRenderer.send("set-window-position", windowType, x, y),
+    resizeWindow: (windowType: WindowType, width: number, height: number) =>
+        ipcRenderer.send("resize-window", windowType, width, height),
     openGroupWindow: () => ipcRenderer.send("open-group-window"),
     openHistoryWindow: () => ipcRenderer.send("open-history-window"),
     openDeviceWindow: () => ipcRenderer.send("open-device-window"),
     openSettingsWindow: () => ipcRenderer.send("open-settings-window"),
     openMonstersWindow: () => ipcRenderer.send("open-monsters-window"),
-    increaseWindowHeight: (windowType: string, step?: number) => ipcRenderer.send("increase-window-height", windowType, step),
-    decreaseWindowHeight: (windowType: string, step?: number) => ipcRenderer.send("decrease-window-height", windowType, step),
-    onWindowShown: (callback: () => void) => ipcRenderer.on("window-shown", () => callback()),
+    increaseWindowHeight: (windowType: string, step?: number) =>
+        ipcRenderer.send("increase-window-height", windowType, step),
+    decreaseWindowHeight: (windowType: string, step?: number) =>
+        ipcRenderer.send("decrease-window-height", windowType, step),
+    onWindowShown: (callback: () => void) =>
+        ipcRenderer.on("window-shown", () => callback()),
     onWindowFocused: (callback: () => void) => {
         const listener = () => callback();
         ipcRenderer.on("window-focused", listener);
@@ -40,35 +53,58 @@ contextBridge.exposeInMainWorld("electron", {
         scale?: number,
     ) => ipcRenderer.send("save-window-size", windowType, width, height, scale),
     getSavedWindowSizes: () => ipcRenderer.invoke("get-saved-window-sizes"),
-    updateVisibleColumns: (cols: Record<string, boolean>) => ipcRenderer.send("update-visible-columns", cols),
-    onVisibleColumnsChanged: (callback: (cols: Record<string, boolean>) => void) => ipcRenderer.on("visible-columns-updated", (_e: IpcRendererEvent, cols: Record<string, boolean>) => callback(cols)),
-    updateGlobalSettings: (settings: Partial<Record<string, any>>) => ipcRenderer.send("update-global-settings", settings),
+    updateVisibleColumns: (cols: Record<string, boolean>) =>
+        ipcRenderer.send("update-visible-columns", cols),
+    onVisibleColumnsChanged: (
+        callback: (cols: Record<string, boolean>) => void,
+    ) =>
+        ipcRenderer.on(
+            "visible-columns-updated",
+            (_e: IpcRendererEvent, cols: Record<string, boolean>) =>
+                callback(cols),
+        ),
+    updateGlobalSettings: (settings: Partial<Record<string, any>>) =>
+        ipcRenderer.send("update-global-settings", settings),
     onTransparencySettingChanged: (callback: (isDisabled: boolean) => void) => {
-        const listener = (_e: IpcRendererEvent, isDisabled: boolean) => callback(isDisabled);
+        const listener = (_e: IpcRendererEvent, isDisabled: boolean) =>
+            callback(isDisabled);
         ipcRenderer.on("transparency-setting-changed", listener);
-        return () => ipcRenderer.removeListener("transparency-setting-changed", listener);
+        return () =>
+            ipcRenderer.removeListener(
+                "transparency-setting-changed",
+                listener,
+            );
     },
     onTransparencyAmountChanged: (callback: (amount: number) => void) => {
-        const listener = (_e: IpcRendererEvent, amount: number) => callback(amount);
+        const listener = (_e: IpcRendererEvent, amount: number) =>
+            callback(amount);
         ipcRenderer.on("transparency-amount-changed", listener);
-        return () => ipcRenderer.removeListener("transparency-amount-changed", listener);
+        return () =>
+            ipcRenderer.removeListener("transparency-amount-changed", listener);
     },
     onClickthroughChanged: (callback: (enabled: boolean) => void) => {
-        const listener = (_e: IpcRendererEvent, enabled: boolean) => callback(enabled);
+        const listener = (_e: IpcRendererEvent, enabled: boolean) =>
+            callback(enabled);
         ipcRenderer.on("clickthrough-changed", listener);
-        return () => ipcRenderer.removeListener("clickthrough-changed", listener);
+        return () =>
+            ipcRenderer.removeListener("clickthrough-changed", listener);
     },
     onHeightStepChanged: (callback: (step: number) => void) => {
         const listener = (_e: IpcRendererEvent, step: number) => callback(step);
         ipcRenderer.on("height-step-changed", listener);
-        return () => ipcRenderer.removeListener("height-step-changed", listener);
+        return () =>
+            ipcRenderer.removeListener("height-step-changed", listener);
     },
     onManualHeightChanged: (callback: (enabled: boolean) => void) => {
-        const listener = (_e: IpcRendererEvent, enabled: boolean) => callback(enabled);
+        const listener = (_e: IpcRendererEvent, enabled: boolean) =>
+            callback(enabled);
         ipcRenderer.on("manual-height-changed", listener);
-        return () => ipcRenderer.removeListener("manual-height-changed", listener);
+        return () =>
+            ipcRenderer.removeListener("manual-height-changed", listener);
     },
-    deleteHistoryLog: (logId: string) => ipcRenderer.invoke("delete-history-log", logId),
+    deleteHistoryLog: (logId: string) =>
+        ipcRenderer.invoke("delete-history-log", logId),
     checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
-    checkForUpdatesWithDialog: () => ipcRenderer.invoke("check-for-updates-with-dialog"),
+    checkForUpdatesWithDialog: () =>
+        ipcRenderer.invoke("check-for-updates-with-dialog"),
 });

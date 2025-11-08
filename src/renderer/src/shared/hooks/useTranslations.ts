@@ -1,6 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import { loadTranslations, t, translateSkill, translateProfession, translateMonsterName } from "../utils/translations";
+import { useState, useEffect } from "react";
+import {
+    loadTranslations,
+    t,
+    translateSkill,
+    translateProfession,
+    translateMonsterName,
+} from "../utils/translations";
 import { fetchSettings, changeLanguage as changeLanguageAPI } from "../api";
+import { getItem, setItem } from "../utils/localStorage";
 import { getSocket } from "./useSocket";
 
 export interface UseTranslationsReturn {
@@ -26,19 +33,15 @@ export function useTranslations(): UseTranslationsReturn {
     useEffect(() => {
         const initTranslations = async () => {
             let cachedLang = "en";
-            try {
-                const stored = localStorage.getItem("appLanguage");
-                if (stored && (stored === "en" || stored === "zh")) {
-                    cachedLang = stored;
-                }
-            } catch (error) {
-                console.warn("Failed to read language from localStorage:", error);
+            const stored = getItem("appLanguage");
+            if (stored && (stored === "en" || stored === "zh")) {
+                cachedLang = stored;
             }
 
             await loadTranslations(cachedLang);
             setCurrentLanguage(cachedLang);
             setIsLoaded(true);
-            
+
             try {
                 let settings = null;
                 let retries = 0;
@@ -49,35 +52,37 @@ export function useTranslations(): UseTranslationsReturn {
                         settings = await fetchSettings();
                         if (settings) break;
                     } catch (error) {
-                        console.log(`Waiting for socket connection... (attempt ${retries + 1}/${maxRetries})`);
+                        console.log(
+                            `Waiting for socket connection... (attempt ${retries + 1}/${maxRetries})`,
+                        );
                     }
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await new Promise((resolve) => setTimeout(resolve, 500));
                     retries++;
                 }
 
                 const targetLang = settings?.language || "en";
 
-                try {
-                    localStorage.setItem("appLanguage", targetLang);
-                } catch (error) {
-                    console.warn("Failed to save language to localStorage:", error);
-                }
+                setItem("appLanguage", targetLang);
 
                 if (targetLang !== cachedLang) {
-                    console.log(`Loading translations for language: ${targetLang}`);
-                    const translationLoaded = await loadTranslations(targetLang);
+                    console.log(
+                        `Loading translations for language: ${targetLang}`,
+                    );
+                    const translationLoaded =
+                        await loadTranslations(targetLang);
 
                     if (translationLoaded) {
                         setCurrentLanguage(targetLang);
                         setIsLoaded(false);
                         setTimeout(() => setIsLoaded(true), 0);
                     } else {
-                        console.warn("Failed to load target language, keeping current language");
+                        console.warn(
+                            "Failed to load target language, keeping current language",
+                        );
                     }
                 }
             } catch (error) {
                 console.error("Failed to fetch language settings:", error);
-                // Already have cached language loaded, so just continue
             }
         };
 
@@ -90,11 +95,7 @@ export function useTranslations(): UseTranslationsReturn {
             const translationLoaded = await loadTranslations(data.language);
             if (translationLoaded) {
                 setCurrentLanguage(data.language);
-                try {
-                    localStorage.setItem("appLanguage", data.language);
-                } catch (error) {
-                    console.warn("Failed to save language to localStorage:", error);
-                }
+                setItem("appLanguage", data.language);
                 setIsLoaded(false);
                 setTimeout(() => setIsLoaded(true), 0);
             }
@@ -113,36 +114,55 @@ export function useTranslations(): UseTranslationsReturn {
         };
     }, []);
 
-    const changeLanguage = useCallback(
-        async (lang: string): Promise<boolean> => {
-            try {
-                const success = await changeLanguageAPI(lang);
-                if (success) {
-                    await loadTranslations(lang);
-                    setCurrentLanguage(lang);
-                    try {
-                        localStorage.setItem("appLanguage", lang);
-                    } catch (error) {
-                        console.warn("Failed to save language to localStorage:", error);
-                    }
-                    return true;
-                }
-                return false;
-            } catch (error) {
-                console.error("Failed to change language:", error);
-                return false;
+    const changeLanguage = async (lang: string): Promise<boolean> => {
+        try {
+            const success = await changeLanguageAPI(lang);
+            if (success) {
+                await loadTranslations(lang);
+                setCurrentLanguage(lang);
+                setItem("appLanguage", lang);
+                return true;
             }
-        },
-        [],
-    );
+            return false;
+        } catch (error) {
+            console.error("Failed to change language:", error);
+            return false;
+        }
+    };
+
+    const translate = (key: string, fallback?: string | null) => {
+        void currentLanguage;
+        return t(key, fallback);
+    };
+
+    const translateSkillWrapper = (
+        skillId: number | string,
+        fallback?: string | null,
+    ) => {
+        void currentLanguage;
+        return translateSkill(skillId, fallback);
+    };
+
+    const translateProfessionWrapper = (profession: string) => {
+        void currentLanguage;
+        return translateProfession(profession);
+    };
+
+    const translateMonsterNameWrapper = (
+        monsterId: number | string,
+        fallback?: string | null,
+    ) => {
+        void currentLanguage;
+        return translateMonsterName(monsterId, fallback);
+    };
 
     return {
         currentLanguage,
-        t,
-        translateSkill,
-        translateProfession,
+        t: translate,
+        translateSkill: translateSkillWrapper,
+        translateProfession: translateProfessionWrapper,
         changeLanguage,
-        translateMonsterName,
+        translateMonsterName: translateMonsterNameWrapper,
         isLoaded,
     };
 }

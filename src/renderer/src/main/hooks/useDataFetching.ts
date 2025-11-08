@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ViewMode, SortColumn, SortDirection, ManualGroupState } from "../../shared/types";
-import { useSocket } from "../../shared/hooks";
+import type {
+    ViewMode,
+    SortColumn,
+    SortDirection,
+    ManualGroupState,
+} from "@shared/types";
+import { useSocket } from "@shared/hooks";
 
 export interface PlayerUser {
     uid: number;
@@ -141,7 +146,10 @@ export function useDataFetching(
         setIsPaused(newPausedState);
 
         try {
-            const json = await emitWithResponse({ event: "togglePause", data: { paused: newPausedState } });
+            const json = await emitWithResponse({
+                event: "togglePause",
+                data: { paused: newPausedState },
+            });
 
             if (json && typeof json.paused === "boolean") {
                 setIsPaused(json.paused);
@@ -159,7 +167,9 @@ export function useDataFetching(
                         userData.startTime &&
                         userData.startTime !== lastStartTimeRef.current
                     ) {
-                        console.log("Server reset detected. Clearing local state.");
+                        console.log(
+                            "Server reset detected. Clearing local state.",
+                        );
                         lastStartTimeRef.current = userData.startTime;
                         lastTotalDamageRef.current = 0;
                         hasDataRef.current = false;
@@ -172,15 +182,17 @@ export function useDataFetching(
                         return;
                     }
 
-                    let userArray: PlayerUser[] = Object.entries(userData.user).map(
-                        ([uid, data]: [string, any]) => ({
-                            ...data,
-                            uid: parseInt(uid, 10),
-                        }),
-                    );
+                    let userArray: PlayerUser[] = Object.entries(
+                        userData.user,
+                    ).map(([uid, data]: [string, any]) => ({
+                        ...data,
+                        uid: parseInt(uid, 10),
+                    }));
 
                     if (viewMode === "solo" && localUid !== null) {
-                        userArray = userArray.filter((u: PlayerUser) => u.uid === localUid);
+                        userArray = userArray.filter(
+                            (u: PlayerUser) => u.uid === localUid,
+                        );
                     }
 
                     userArray = userArray.filter(
@@ -206,7 +218,8 @@ export function useDataFetching(
                         setPlayers([]);
 
                         if (!hasDataRef.current) {
-                            const shouldBeLoading = viewMode === "solo" && localUid === null;
+                            const shouldBeLoading =
+                                viewMode === "solo" && localUid === null;
                             if (isLoadingRef.current !== shouldBeLoading) {
                                 isLoadingRef.current = shouldBeLoading;
                                 setIsLoading(shouldBeLoading);
@@ -260,10 +273,16 @@ export function useDataFetching(
                         } else {
                             const top10 = userArray.slice(0, 10);
                             const isLocalInTop10 = localUid
-                                ? top10.some((u: PlayerUser) => u.uid === localUid)
+                                ? top10.some(
+                                      (u: PlayerUser) => u.uid === localUid,
+                                  )
                                 : false;
 
-                            if (userArray.length > 10 && !isLocalInTop10 && localUid) {
+                            if (
+                                userArray.length > 10 &&
+                                !isLocalInTop10 &&
+                                localUid
+                            ) {
                                 const localUserExtra = userArray.find(
                                     (u: PlayerUser) => u.uid === localUid,
                                 );
@@ -318,7 +337,16 @@ export function useDataFetching(
             if (unsubscribeSkillData) unsubscribeSkillData();
             if (unsubscribeSoloUser) unsubscribeSoloUser();
         };
-    }, [on, viewMode, sortColumn, sortDirection, manualGroupState, onServerReset, showAllPlayers, localUid]);
+    }, [
+        on,
+        viewMode,
+        sortColumn,
+        sortDirection,
+        manualGroupState,
+        onServerReset,
+        showAllPlayers,
+        localUid,
+    ]);
 
     return {
         players,

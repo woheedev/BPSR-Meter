@@ -15,7 +15,7 @@ export default function SettingsRangeInput({
     min,
     max,
     onChange,
-    showValue = true
+    showValue = true,
 }: SettingsRangeInputProps): React.JSX.Element {
     return (
         <div className="settings-input-row mt-2">

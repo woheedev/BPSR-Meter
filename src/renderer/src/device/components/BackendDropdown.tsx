@@ -1,5 +1,5 @@
 import React from "react";
-import Dropdown from "../../shared/components/Dropdown";
+import Dropdown from "@shared/components/Dropdown";
 
 const OPTIONS = [
     { value: "npcap", label: "Npcap", desc: "Npcap (pcap)" },

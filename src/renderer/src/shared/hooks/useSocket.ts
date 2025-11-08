@@ -1,6 +1,6 @@
 /**
  * Centralized Socket.IO connection hook
- * 
+ *
  * This hook manages a singleton Socket.IO connection for the entire application.
  * It provides methods to emit events and listen for responses.
  */
@@ -63,7 +63,11 @@ export function useSocket() {
 
                 const timeout = options.timeout || 5000;
                 const timeoutId = setTimeout(() => {
-                    reject(new Error(`Socket request timeout for event: ${options.event}`));
+                    reject(
+                        new Error(
+                            `Socket request timeout for event: ${options.event}`,
+                        ),
+                    );
                 }, timeout);
 
                 socketRef.current.emit(
@@ -72,11 +76,11 @@ export function useSocket() {
                     (response: T) => {
                         clearTimeout(timeoutId);
                         resolve(response);
-                    }
+                    },
                 );
             });
         },
-        []
+        [],
     );
 
     /**
@@ -93,23 +97,29 @@ export function useSocket() {
     /**
      * Listen for an event
      */
-    const on = useCallback((event: string, handler: (...args: any[]) => void) => {
-        if (socketRef.current) {
-            socketRef.current.on(event, handler);
-            return () => {
-                socketRef.current?.off(event, handler);
-            };
-        }
-    }, []);
+    const on = useCallback(
+        (event: string, handler: (...args: any[]) => void) => {
+            if (socketRef.current) {
+                socketRef.current.on(event, handler);
+                return () => {
+                    socketRef.current?.off(event, handler);
+                };
+            }
+        },
+        [],
+    );
 
     /**
      * Remove event listener
      */
-    const off = useCallback((event: string, handler?: (...args: any[]) => void) => {
-        if (socketRef.current) {
-            socketRef.current.off(event, handler);
-        }
-    }, []);
+    const off = useCallback(
+        (event: string, handler?: (...args: any[]) => void) => {
+            if (socketRef.current) {
+                socketRef.current.off(event, handler);
+            }
+        },
+        [],
+    );
 
     return {
         socket: socketRef.current,

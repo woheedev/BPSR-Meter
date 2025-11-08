@@ -3,7 +3,7 @@ import {
     formatDuration,
     formatDate,
     formatStat,
-} from "../../shared/utils/formatters";
+} from "@shared/utils/formatters";
 import type { HistoryListItem } from "../types";
 
 export interface HistoryListProps {
@@ -78,7 +78,7 @@ export function HistoryList({
                         className={`history-item ${isActive ? "active" : ""}`}
                         style={{ cursor: "pointer" }}
                     >
-                        <div 
+                        <div
                             className="history-item-content"
                             onClick={() => onSelectItem(timestamp)}
                         >
@@ -105,7 +105,9 @@ export function HistoryList({
                             className="history-item-delete"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (window.confirm(`Delete log from ${date}?`)) {
+                                if (
+                                    window.confirm(`Delete log from ${date}?`)
+                                ) {
                                     onDeleteItem(timestamp);
                                 }
                             }}

@@ -1,26 +1,29 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ControlBar } from "./components/ControlBar";
 import { LoadingIndicator } from "./components/LoadingIndicator";
 import { PlayerList } from "./components/PlayerList";
 import { SkillsView } from "./components/SkillsView";
 import { useDataFetching } from "./hooks/useDataFetching";
-import { useWindowControls } from "../shared/hooks/useWindowControls";
+import { useWindowControls } from "@shared/hooks/useWindowControls";
 import { usePlayerRegistry } from "./hooks/usePlayerRegistry";
 import { useManualGroup } from "./hooks/useManualGroup";
-import { useWindowResize } from "../shared/hooks/useWindowResize";
-import { useTranslations } from "../shared/hooks/useTranslations";
-import { resetStatistics } from "../shared/api";
-import ResizeHandle from "../shared/components/ResizeHandle";
-import type { ViewMode, SortColumn, SortDirection } from "../shared/types";
+import { useWindowResize } from "@shared/hooks/useWindowResize";
+import { useTranslations } from "@shared/hooks/useTranslations";
+import { resetStatistics } from "@shared/api";
+import ResizeHandle from "@shared/components/ResizeHandle";
+import { electron } from "@shared/utils/electron";
+import { getItem, setItem, getJSON, setJSON } from "@shared/utils/localStorage";
+import type { ViewMode, SortColumn, SortDirection } from "@shared/types";
 
 export function MainApp(): React.JSX.Element {
-
     const [viewMode, setViewMode] = useState<ViewMode>("nearby");
     const [sortColumn, setSortColumn] = useState<SortColumn>("totalDmg");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
     const [showAllPlayers, setShowAllPlayers] = useState<boolean>(false);
     const [skillsScope, setSkillsScope] = useState<"solo" | "nearby">("nearby");
-    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    const [visibleColumns, setVisibleColumns] = useState<
+        Record<string, boolean>
+    >({
         dps: true,
         hps: true,
         totalDmg: true,
@@ -35,102 +38,87 @@ export function MainApp(): React.JSX.Element {
     });
 
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem("visibleColumns");
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (parsed && typeof parsed === "object") {
-                    setVisibleColumns((prev) => ({ ...prev, ...parsed }));
-                }
+        const parsed = getJSON<Record<string, boolean>>("visibleColumns");
+        if (parsed && typeof parsed === "object") {
+            setVisibleColumns((prev) => ({ ...prev, ...parsed }));
+        }
+    }, []);
+
+    useEffect(() => {
+        electron.onVisibleColumnsChanged((cols: Record<string, boolean>) => {
+            if (cols && typeof cols === "object") {
+                setVisibleColumns((prev) => ({ ...prev, ...cols }));
+                setJSON("visibleColumns", cols);
             }
-        } catch (err) {
-            console.warn("Failed to load visibleColumns from localStorage", err);
-        }
+        });
     }, []);
 
     useEffect(() => {
         try {
-            window.electron.onVisibleColumnsChanged((cols: Record<string, boolean>) => {
-                if (cols && typeof cols === "object") {
-                    setVisibleColumns((prev) => ({ ...prev, ...cols }));
-                    try {
-                        localStorage.setItem("visibleColumns", JSON.stringify(cols));
-                    } catch (e) {
-                        console.warn("Failed to persist visibleColumns from IPC", e);
-                    }
-                }
-            });
-        } catch (err) {
-
-        }
-    }, []);
-
-    useEffect(() => {
-        try {
-            const disableTransparency = localStorage.getItem("disableTransparency") === "true";
-            document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
+            const disableTransparency =
+                getItem("disableTransparency") === "true";
+            document.body.style.backgroundColor = disableTransparency
+                ? "#000"
+                : "transparent";
 
             // Apply transparency amount
-            const transparencyAmount = localStorage.getItem("transparencyAmount");
-            const amount = transparencyAmount ? parseInt(transparencyAmount, 10) : 70;
+            const transparencyAmount = getItem("transparencyAmount");
+            const amount = transparencyAmount
+                ? parseInt(transparencyAmount, 10)
+                : 70;
             const opacity = amount / 100;
-            document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
+            document.documentElement.style.setProperty(
+                "--transparency-amount",
+                opacity.toString(),
+            );
         } catch (err) {
             console.warn("Failed to apply transparency setting", err);
         }
 
-        try {
-            const unsubscribe = window.electron.onTransparencySettingChanged((isDisabled: boolean) => {
-                document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-            });
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency listener", err);
-        }
+        const unsubscribe = electron.onTransparencySettingChanged(
+            (isDisabled: boolean) => {
+                document.body.style.backgroundColor = isDisabled
+                    ? "#000"
+                    : "transparent";
+            },
+        );
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        try {
-            const unsubscribe = window.electron.onTransparencyAmountChanged?.((amount: number) => {
+        const unsubscribe = electron.onTransparencyAmountChanged(
+            (amount: number) => {
                 const opacity = amount / 100;
-                document.documentElement.style.setProperty('--transparency-amount', opacity.toString());
-                localStorage.setItem("transparencyAmount", amount.toString());
-            });
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency amount listener", err);
+                document.documentElement.style.setProperty(
+                    "--transparency-amount",
+                    opacity.toString(),
+                );
+                setItem("transparencyAmount", amount.toString());
+            },
+        );
+        return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = electron.onClickthroughChanged(
+            (enabled: boolean) => {
+                electron.setIgnoreMouseEvents(enabled, { forward: true });
+                setItem("clickthroughEnabled", enabled.toString());
+            },
+        );
+        return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        const clickthroughEnabled = getItem("clickthroughEnabled") === "true";
+        if (clickthroughEnabled) {
+            electron.setIgnoreMouseEvents(true, { forward: true });
         }
     }, []);
 
     useEffect(() => {
         try {
-            const unsubscribe = window.electron.onClickthroughChanged?.((enabled: boolean) => {
-                if (window.electron?.setIgnoreMouseEvents) {
-                    window.electron.setIgnoreMouseEvents(enabled, { forward: true });
-                }
-                localStorage.setItem("clickthroughEnabled", enabled.toString());
-            });
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup clickthrough listener", err);
-        }
-    }, []);
-
-    useEffect(() => {
-        try {
-            // Apply clickthrough setting
-            const clickthroughEnabled = localStorage.getItem("clickthroughEnabled") === "true";
-            if (clickthroughEnabled && window.electron?.setIgnoreMouseEvents) {
-                window.electron.setIgnoreMouseEvents(true, { forward: true });
-            }
-        } catch (err) {
-            console.warn("Failed to apply clickthrough setting", err);
-        }
-    }, []);
-
-    useEffect(() => {
-        try {
-            const performanceMode = localStorage.getItem("performanceMode") === "true";
+            const performanceMode = getItem("performanceMode") === "true";
             if (performanceMode) {
                 document.body.classList.add("performance-mode");
             } else {
@@ -166,7 +154,7 @@ export function MainApp(): React.JSX.Element {
         windowType: "main",
     });
 
-    const { handleResizeStart } = useWindowResize('main');
+    const { handleResizeStart } = useWindowResize("main");
 
     const {
         players,
@@ -190,79 +178,73 @@ export function MainApp(): React.JSX.Element {
     // Keyboard shortcut for lock toggle (Ctrl+L or Cmd+L)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+            if ((e.ctrlKey || e.metaKey) && e.key === "l") {
                 e.preventDefault();
                 toggleLock();
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
     }, [toggleLock]);
 
-    const handleToggleViewMode = useCallback(() => {
+    const handleToggleViewMode = () => {
         setViewMode((prev) => (prev === "nearby" ? "solo" : "nearby"));
-    }, []);
+    };
 
-    const handleToggleSkillsMode = useCallback(() => {
+    const handleToggleSkillsMode = () => {
         setViewMode((prev) => (prev === "skills" ? "nearby" : "skills"));
-    }, []);
+    };
 
-    const handleToggleSkillsScope = useCallback(() => {
+    const handleToggleSkillsScope = () => {
         setSkillsScope((prev) => (prev === "nearby" ? "solo" : "nearby"));
-    }, []);
+    };
 
-    const handleSortChange = useCallback(
-        (column: SortColumn) => {
-            if (sortColumn === column) {
-                setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-            } else {
-                setSortColumn(column);
-                setSortDirection("desc");
-            }
-        },
-        [sortColumn],
-    );
+    const handleSortChange = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortColumn(column);
+            setSortDirection("desc");
+        }
+    };
 
-    const handleSync = useCallback(async () => {
+    const handleSync = async () => {
         await resetStatistics();
-    }, []);
+    };
 
-    const handleLanguageToggle = useCallback(async () => {
+    const handleLanguageToggle = async () => {
         const newLang = currentLanguage === "en" ? "zh" : "en";
         await changeLanguage(newLang);
-    }, [currentLanguage, changeLanguage]);
+    };
 
-    const handleAddToRegistry = useCallback(
-        async (uid: string, name: string) => {
-            const success = await addToRegistry(uid, name);
+    const handleAddToRegistry = async (uid: string, name: string) => {
+        const success = await addToRegistry(uid, name);
 
-            if (success) {
-                const btn = document.querySelector(
-                    `.add-to-registry-btn[data-uid="${uid}"]`,
-                ) as HTMLButtonElement;
-                if (btn) {
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    btn.style.background = "rgba(46, 204, 113, 0.3)";
-                    btn.style.borderColor = "#2ecc71";
-                    btn.style.color = "#2ecc71";
+        if (success) {
+            const btn = document.querySelector(
+                `.add-to-registry-btn[data-uid="${uid}"]`,
+            ) as HTMLButtonElement;
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.style.background = "rgba(46, 204, 113, 0.3)";
+                btn.style.borderColor = "#2ecc71";
+                btn.style.color = "#2ecc71";
 
-                    setTimeout(() => {
-                        btn.innerHTML = originalHTML;
-                        btn.style.background = "";
-                        btn.style.borderColor = "";
-                        btn.style.color = "";
-                    }, 1000);
-                }
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.background = "";
+                    btn.style.borderColor = "";
+                    btn.style.color = "";
+                }, 1000);
             }
-        },
-        [addToRegistry],
-    );
+        }
+    };
 
-    const handleClose = useCallback(() => {
-        window.electron.closeWindow();
-    }, []);
+    const handleClose = () => {
+        electron.closeWindow();
+    };
 
     return (
         <div
@@ -295,32 +277,34 @@ export function MainApp(): React.JSX.Element {
                 onZoomOut={zoomOut}
                 visibleColumns={visibleColumns}
                 onToggleColumn={(key: string) => {
-                    const newState = { ...visibleColumns, [key]: !visibleColumns[key] };
+                    const newState = {
+                        ...visibleColumns,
+                        [key]: !visibleColumns[key],
+                    };
                     setVisibleColumns(newState);
-                    try {
-                        localStorage.setItem("visibleColumns", JSON.stringify(newState));
-                    } catch (e) {
-                        console.warn("Failed to persist visibleColumns to localStorage", e);
-                    }
+                    setJSON("visibleColumns", newState);
                 }}
                 t={t}
                 startTime={startTime}
                 players={players}
                 localUid={localUid}
-                manualGroupMembers={manualGroupState?.enabled ? manualGroupState.members : undefined}
+                manualGroupMembers={
+                    manualGroupState?.enabled
+                        ? manualGroupState.members
+                        : undefined
+                }
             />
 
             {isLoading ? (
-                <LoadingIndicator
-                    message={t(
-                        "ui.messages.waitingForData",
-                    )}
-                />
+                <LoadingIndicator message={t("ui.messages.waitingForData")} />
             ) : viewMode === "skills" && skillsData ? (
                 <SkillsView
                     skillsData={
                         skillsScope === "solo" && localUid
-                            ? { [String(localUid)]: skillsData[String(localUid)] }
+                            ? {
+                                  [String(localUid)]:
+                                      skillsData[String(localUid)],
+                              }
                             : skillsData
                     }
                     startTime={startTime}

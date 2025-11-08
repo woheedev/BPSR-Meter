@@ -39,7 +39,9 @@ export function HistoryControls({
                         className={`fa-solid fa-toggle-${isHistorySavingEnabled ? "on" : "off"}`}
                         style={{ marginRight: "6px" }}
                     ></i>
-                    {isHistorySavingEnabled ? t("ui.messages.savingEnabled") : t("ui.buttons.enableSaving")}
+                    {isHistorySavingEnabled
+                        ? t("ui.messages.savingEnabled")
+                        : t("ui.buttons.enableSaving")}
                 </button>
 
                 <button
@@ -57,7 +59,9 @@ export function HistoryControls({
                         fontSize: "11px",
                         fontWeight: 600,
                         opacity: isHistorySavingEnabled ? 1 : 0.4,
-                        cursor: isHistorySavingEnabled ? "pointer" : "not-allowed",
+                        cursor: isHistorySavingEnabled
+                            ? "pointer"
+                            : "not-allowed",
                     }}
                 >
                     <i

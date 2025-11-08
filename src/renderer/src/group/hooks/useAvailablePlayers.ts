@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useInterval } from "../../shared/hooks";
-import type { PlayerRegistry } from "../../shared/types";
+import { useInterval } from "@shared/hooks";
+import type { PlayerRegistry } from "@shared/types";
 
 export interface AvailablePlayer {
     uuid: string;
@@ -39,11 +39,9 @@ export function useAvailablePlayers(
             const result = await response.json();
 
             if (result.code === 0 && result.user) {
- 
                 const playersArray: AvailablePlayer[] = Object.entries(
                     result.user,
                 ).map(([uid, userData]: [string, any]) => {
-
                     const userName =
                         userData.name &&
                         userData.name !== "Unknown" &&
@@ -82,7 +80,6 @@ export function useAvailablePlayers(
             setIsLoading(false);
         }
     }, [playerRegistry]);
-
 
     useEffect(() => {
         fetchPlayers();

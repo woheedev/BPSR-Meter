@@ -1,11 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { setItem, getItem } from "../../shared/utils/localStorage";
+import { setItem, getItem } from "@shared/utils/localStorage";
+import { electron } from "@shared/utils/electron";
 
 type ResizeDirection =
-    | "top" | "bottom" | "left" | "right"
-    | "top-left" | "top-right" | "bottom-left" | "bottom-right";
+    | "top"
+    | "bottom"
+    | "left"
+    | "right"
+    | "top-left"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-right";
 
-type WindowType = "main" | "group" | "history" | "device" | "settings" | "monsters";
+type WindowType =
+    | "main"
+    | "group"
+    | "history"
+    | "device"
+    | "settings"
+    | "monsters";
 
 export function useWindowResize(windowType: WindowType) {
     const [isResizing, setIsResizing] = useState(false);
@@ -19,99 +32,160 @@ export function useWindowResize(windowType: WindowType) {
         startWindowY: number;
     } | null>(null);
 
-    const handleResizeStart = (e: React.PointerEvent<HTMLDivElement>, direction: ResizeDirection) => {
+    const handleResizeStart = (
+        e: React.PointerEvent<HTMLDivElement>,
+        direction: ResizeDirection,
+    ) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         setIsResizing(true);
 
-        window.electron.setIgnoreMouseEvents(false);
+        electron.setIgnoreMouseEvents(false);
 
         const startX = e.screenX;
         const startY = e.screenY;
 
-        window.electron.getWindowPosition().then((position: { x: number; y: number; width: number; height: number }) => {
-            resizeStateRef.current = {
-                direction,
-                startX,
-                startY,
-                startWidth: position.width,
-                startHeight: position.height,
-                startWindowX: position.x,
-                startWindowY: position.y,
-            };
-        });
+        electron
+            .getWindowPosition()
+            .then(
+                (position: {
+                    x: number;
+                    y: number;
+                    width: number;
+                    height: number;
+                }) => {
+                    resizeStateRef.current = {
+                        direction,
+                        startX,
+                        startY,
+                        startWidth: position.width,
+                        startHeight: position.height,
+                        startWindowX: position.x,
+                        startWindowY: position.y,
+                    };
+                },
+            );
     };
 
     useEffect(() => {
+        let animationFrameId: number | null = null;
+
         const handleMouseMove = (e: MouseEvent) => {
-            if (!isResizing || !window.electron || !resizeStateRef.current) return;
+            if (!isResizing || !resizeStateRef.current) return;
 
             e.preventDefault();
 
-            const { direction, startX, startY, startWidth, startHeight, startWindowX, startWindowY } = resizeStateRef.current;
-            const deltaX = e.screenX - startX;
-            const deltaY = e.screenY - startY;
-
-            let newWidth = startWidth;
-            let newHeight = startHeight;
-            let newX = startWindowX;
-            let newY = startWindowY;
-
-            // Calculate new dimensions based on direction
-            switch (direction) {
-                case "right":
-                    newWidth = startWidth + deltaX;
-                    break;
-                case "left":
-                    newWidth = startWidth - deltaX;
-                    newX = startWindowX + deltaX;
-                    break;
-                case "bottom":
-                    newHeight = startHeight + deltaY;
-                    break;
-                case "top":
-                    newHeight = startHeight - deltaY;
-                    newY = startWindowY + deltaY;
-                    break;
-                case "bottom-right":
-                    newWidth = startWidth + deltaX;
-                    newHeight = startHeight + deltaY;
-                    break;
-                case "bottom-left":
-                    newWidth = startWidth - deltaX;
-                    newHeight = startHeight + deltaY;
-                    newX = startWindowX + deltaX;
-                    break;
-                case "top-right":
-                    newWidth = startWidth + deltaX;
-                    newHeight = startHeight - deltaY;
-                    newY = startWindowY + deltaY;
-                    break;
-                case "top-left":
-                    newWidth = startWidth - deltaX;
-                    newHeight = startHeight - deltaY;
-                    newX = startWindowX + deltaX;
-                    newY = startWindowY + deltaY;
-                    break;
+            if (animationFrameId !== null) {
+                return;
             }
 
-            // Apply minimum sizes
-            newWidth = Math.max(newWidth, 400);
-            newHeight = Math.max(newHeight, 300);
+            animationFrameId = requestAnimationFrame(() => {
+                animationFrameId = null;
 
-            // If we're resizing from left or top, adjust position
-            if (direction.includes("left") || direction.includes("top")) {
-                window.electron.setWindowPosition(windowType, newX, newY);
-            }
+                if (!resizeStateRef.current) return;
 
-            setItem(`${windowType}.width`, Math.ceil(newWidth));
-            setItem(`${windowType}.height`, Math.ceil(newHeight));
+                const {
+                    direction,
+                    startX,
+                    startY,
+                    startWidth,
+                    startHeight,
+                    startWindowX,
+                    startWindowY,
+                } = resizeStateRef.current;
+                const deltaX = e.screenX - startX;
+                const deltaY = e.screenY - startY;
 
-            window.electron.resizeWindow(windowType, Number(newWidth), Number(newHeight));
+                const minWidth = 400;
+                const minHeight = 300;
+
+                let newWidth = startWidth;
+                let newHeight = startHeight;
+                let newX = startWindowX;
+                let newY = startWindowY;
+
+                switch (direction) {
+                    case "right":
+                        newWidth = Math.max(startWidth + deltaX, minWidth);
+                        break;
+                    case "left":
+                        newWidth = Math.max(startWidth - deltaX, minWidth);
+                        if (startWidth - deltaX >= minWidth) {
+                            newX = startWindowX + deltaX;
+                        } else {
+                            newX = startWindowX + (startWidth - minWidth);
+                        }
+                        break;
+                    case "bottom":
+                        newHeight = Math.max(startHeight + deltaY, minHeight);
+                        break;
+                    case "top":
+                        newHeight = Math.max(startHeight - deltaY, minHeight);
+                        if (startHeight - deltaY >= minHeight) {
+                            newY = startWindowY + deltaY;
+                        } else {
+                            newY = startWindowY + (startHeight - minHeight);
+                        }
+                        break;
+                    case "bottom-right":
+                        newWidth = Math.max(startWidth + deltaX, minWidth);
+                        newHeight = Math.max(startHeight + deltaY, minHeight);
+                        break;
+                    case "bottom-left":
+                        newWidth = Math.max(startWidth - deltaX, minWidth);
+                        newHeight = Math.max(startHeight + deltaY, minHeight);
+                        if (startWidth - deltaX >= minWidth) {
+                            newX = startWindowX + deltaX;
+                        } else {
+                            newX = startWindowX + (startWidth - minWidth);
+                        }
+                        break;
+                    case "top-right":
+                        newWidth = Math.max(startWidth + deltaX, minWidth);
+                        newHeight = Math.max(startHeight - deltaY, minHeight);
+                        if (startHeight - deltaY >= minHeight) {
+                            newY = startWindowY + deltaY;
+                        } else {
+                            newY = startWindowY + (startHeight - minHeight);
+                        }
+                        break;
+                    case "top-left":
+                        newWidth = Math.max(startWidth - deltaX, minWidth);
+                        newHeight = Math.max(startHeight - deltaY, minHeight);
+                        if (startWidth - deltaX >= minWidth) {
+                            newX = startWindowX + deltaX;
+                        } else {
+                            newX = startWindowX + (startWidth - minWidth);
+                        }
+                        if (startHeight - deltaY >= minHeight) {
+                            newY = startWindowY + deltaY;
+                        } else {
+                            newY = startWindowY + (startHeight - minHeight);
+                        }
+                        break;
+                }
+
+                if (direction.includes("left") || direction.includes("top")) {
+                    electron.setWindowPosition(
+                        windowType,
+                        Math.round(newX),
+                        Math.round(newY),
+                    );
+                }
+
+                electron.resizeWindow(
+                    windowType,
+                    Math.round(newWidth),
+                    Math.round(newHeight),
+                );
+
+                setItem(`${windowType}.width`, Math.ceil(newWidth));
+                setItem(`${windowType}.height`, Math.ceil(newHeight));
+            });
         };
 
         const handleMouseUp = () => {
             if (isResizing) {
-                window.electron.saveWindowSize(
+                electron.saveWindowSize(
                     windowType,
                     Number(getItem(`${windowType}.width`)),
                     Number(getItem(`${windowType}.height`)),

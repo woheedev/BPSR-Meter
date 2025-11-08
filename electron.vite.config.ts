@@ -18,12 +18,17 @@ export default defineConfig({
         ],
         build: {
             outDir: 'out/main',
+            minify: 'esbuild',
+            sourcemap: false,
             rollupOptions: {
                 input: {
                     index: path.resolve(__dirname, 'src/main/index.ts'),
                     server: path.resolve(__dirname, 'src/main/server.ts'),
                 },
-                external: ['electron', 'child_process', 'fs', 'path', 'net', 'url']
+                external: ['electron', 'child_process', 'fs', 'path', 'net', 'url'],
+                output: {
+                    manualChunks: undefined
+                }
             }
         },
         resolve: {
@@ -51,6 +56,8 @@ export default defineConfig({
         root: path.resolve(__dirname, 'src'),
         build: {
             outDir: path.resolve(__dirname, 'out/renderer'),
+            minify: 'esbuild',
+            sourcemap: false,
             rollupOptions: {
                 input: {
                     index: path.resolve(__dirname, 'src/index.html'),
@@ -59,11 +66,28 @@ export default defineConfig({
                     device: path.resolve(__dirname, 'src/device.html'),
                     settings: path.resolve(__dirname, 'src/settings.html'),
                     monsters: path.resolve(__dirname, 'src/monsters.html'),
+                },
+                output: {
+                    manualChunks(id) {
+                        if (id.includes('node_modules')) {
+                            if (id.includes('react') || id.includes('react-dom')) {
+                                return 'vendor-react';
+                            }
+                            if (id.includes('socket.io-client')) {
+                                return 'vendor-socket';
+                            }
+                            return 'vendor';
+                        }
+                    }
                 }
             }
         },
         plugins: [
-            react(),
+            react({
+                babel: {
+                    plugins: ['babel-plugin-react-compiler'],
+                },
+            }),
             tailwindcss(),
             copy({
                 targets: [
@@ -76,7 +100,7 @@ export default defineConfig({
         resolve: {
             alias: {
                 '@': path.resolve(__dirname, 'src/renderer'),
-                '@shared': path.resolve(__dirname, 'src/types'),
+                '@shared': path.resolve(__dirname, 'src/renderer/src/shared'),
                 '@server': path.resolve(__dirname, 'src/server'),
                 '@utils': path.resolve(__dirname, 'src/utils')
             }

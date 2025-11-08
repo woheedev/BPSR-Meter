@@ -1,5 +1,5 @@
 import React from "react";
-import Dropdown from "../shared/components/Dropdown";
+import Dropdown from "@shared/components/Dropdown";
 
 const OPTIONS = [
     { value: "hp", label: "HP" },
@@ -7,12 +7,12 @@ const OPTIONS = [
     { value: "distance", label: "Distance" },
 ];
 
-export function SortDropdown({ 
-    value, 
-    onChange 
-}: { 
-    value: string; 
-    onChange: (v: string) => void; 
+export function SortDropdown({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (v: string) => void;
 }): React.JSX.Element {
     return (
         <Dropdown

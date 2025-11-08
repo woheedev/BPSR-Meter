@@ -5,7 +5,7 @@ interface SettingsDescriptionProps {
 }
 
 export default function SettingsDescription({
-    children
+    children,
 }: SettingsDescriptionProps): React.JSX.Element {
     return <p className="settings-description">{children}</p>;
 }

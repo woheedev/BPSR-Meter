@@ -23,16 +23,24 @@ export default function Dropdown({
     disabled = false,
     ariaLabel = "Select option",
     minWidth,
-    className = "backend-dropdown"
+    className = "backend-dropdown",
 }: DropdownProps): React.JSX.Element {
     const [open, setOpen] = useState(false);
-    const [highlight, setHighlight] = useState<number>(() => 
-        Math.max(0, options.findIndex((o) => o.value === value))
+    const [highlight, setHighlight] = useState<number>(() =>
+        Math.max(
+            0,
+            options.findIndex((o) => o.value === value),
+        ),
     );
     const ref = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        setHighlight(Math.max(0, options.findIndex((o) => o.value === value)));
+        setHighlight(
+            Math.max(
+                0,
+                options.findIndex((o) => o.value === value),
+            ),
+        );
     }, [value, options]);
 
     useEffect(() => {
@@ -75,9 +83,9 @@ export default function Dropdown({
     const selected = options.find((o) => o.value === value) || options[0];
 
     return (
-        <div 
-            className={className} 
-            ref={ref} 
+        <div
+            className={className}
+            ref={ref}
             style={minWidth ? { minWidth } : undefined}
         >
             <button
@@ -92,7 +100,9 @@ export default function Dropdown({
             >
                 <div className="trigger-left">
                     <div className="trigger-label">{selected.label}</div>
-                    {selected.desc && <div className="trigger-desc">{selected.desc}</div>}
+                    {selected.desc && (
+                        <div className="trigger-desc">{selected.desc}</div>
+                    )}
                 </div>
                 <div className="trigger-chevron" aria-hidden />
             </button>
@@ -109,7 +119,9 @@ export default function Dropdown({
                             onClick={() => handleSelect(opt.value)}
                         >
                             <div className="opt-label">{opt.label}</div>
-                            {opt.desc && <div className="opt-desc">{opt.desc}</div>}
+                            {opt.desc && (
+                                <div className="opt-desc">{opt.desc}</div>
+                            )}
                         </li>
                     ))}
                 </ul>

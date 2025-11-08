@@ -53,7 +53,8 @@ function emitWithCallback<T = any>(event: string, data?: any): Promise<T> {
 
 export async function fetchPlayerData(): Promise<PlayerData[]> {
     try {
-        const result: ApiResponse<PlayerData[]> = await emitWithCallback("getPlayerData");
+        const result: ApiResponse<PlayerData[]> =
+            await emitWithCallback("getPlayerData");
 
         if (result.code === 0 && result.data) {
             return result.data;
@@ -69,7 +70,8 @@ export async function fetchPlayerData(): Promise<PlayerData[]> {
 
 export async function fetchSettings(): Promise<Settings> {
     try {
-        const result: ApiResponse<Settings> = await emitWithCallback("getSettings");
+        const result: ApiResponse<Settings> =
+            await emitWithCallback("getSettings");
 
         if (result.code === 0 && result.data) {
             return result.data;
@@ -100,7 +102,9 @@ export async function changeLanguage(language: string): Promise<boolean> {
     }
 
     try {
-        const result: ApiResponse = await emitWithCallback("changeLanguage", { language });
+        const result: ApiResponse = await emitWithCallback("changeLanguage", {
+            language,
+        });
         return result.code === 0;
     } catch (error) {
         logError("changeLanguage", error);
@@ -110,7 +114,8 @@ export async function changeLanguage(language: string): Promise<boolean> {
 
 export async function getManualGroup(): Promise<ManualGroupState | null> {
     try {
-        const result: ApiResponse<ManualGroupState> = await emitWithCallback("getManualGroup");
+        const result: ApiResponse<ManualGroupState> =
+            await emitWithCallback("getManualGroup");
 
         if (result.code === 0 && result.data) {
             return result.data;
@@ -137,7 +142,10 @@ export async function updateManualGroup(
     }
 
     try {
-        const result: ApiResponse = await emitWithCallback("updateManualGroup", groupState);
+        const result: ApiResponse = await emitWithCallback(
+            "updateManualGroup",
+            groupState,
+        );
         return result.code === 0;
     } catch (error) {
         logError("updateManualGroup", error);
@@ -157,7 +165,8 @@ export async function clearManualGroup(): Promise<boolean> {
 
 export async function getPlayerRegistry(): Promise<PlayerRegistry> {
     try {
-        const result: ApiResponse<PlayerRegistry> = await emitWithCallback("getPlayerRegistry");
+        const result: ApiResponse<PlayerRegistry> =
+            await emitWithCallback("getPlayerRegistry");
 
         if (result.code === 0 && result.data) {
             return result.data;
@@ -186,7 +195,10 @@ export async function addToPlayerRegistry(
     }
 
     try {
-        const result: ApiResponse = await emitWithCallback("addToPlayerRegistry", { uuid, name });
+        const result: ApiResponse = await emitWithCallback(
+            "addToPlayerRegistry",
+            { uuid, name },
+        );
         return result.code === 0;
     } catch (error) {
         logError("addToPlayerRegistry", error);

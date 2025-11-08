@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from "react";
-import { useTranslations } from "../../shared/hooks/useTranslations";
+import { useTranslations } from "@shared/hooks/useTranslations";
 
 export interface CombatTimerProps {
     startTime: number;
@@ -7,7 +7,10 @@ export interface CombatTimerProps {
     hasDamage: boolean;
 }
 
-function CombatTimerComponent({ startTime, isPaused }: CombatTimerProps): React.JSX.Element {
+function CombatTimerComponent({
+    startTime,
+    isPaused,
+}: CombatTimerProps): React.JSX.Element {
     const [elapsed, setElapsed] = useState<number>(0);
     const { t } = useTranslations();
 

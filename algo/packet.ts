@@ -413,6 +413,7 @@ class PacketProcessor {
                         if (!this.userDataManager.enemyCache.isDead.get(enemyUid)) {
                             this.userDataManager.enemyCache.isDead.set(enemyUid, true);
                             this.userDataManager.enemyCache.hp.set(enemyUid, 0);
+                            this.userDataManager.enemyCache.deathTime.set(enemyUid, Date.now());
                         }
                     }
                 }
@@ -724,7 +725,7 @@ class PacketProcessor {
         }
     }
 
-    #processEnemyAttrs(enemyUid: string, attrs: any[]) {
+    #processEnemyAttrs(enemyUid: number, attrs: any[]) {
         for (const attr of attrs) {
             if (!attr.Id || !attr.RawData) continue;
             const reader = pbjs.Reader.create(attr.RawData);
@@ -755,6 +756,10 @@ class PacketProcessor {
 
                     if (enemyHp > 0 && this.userDataManager.enemyCache.isDead.get(enemyUid)) {
                         this.userDataManager.enemyCache.isDead.delete(enemyUid);
+                        this.userDataManager.enemyCache.damageDealt.delete(enemyUid);
+                        this.userDataManager.enemyCache.firstHitTime.delete(enemyUid);
+                        this.userDataManager.enemyCache.deathTime.delete(enemyUid);
+                        this.userDataManager.enemyCache.playerDamage.delete(enemyUid);
                     }
 
                     this.#reportBossHpThreshold(enemyUid, enemyHp);
@@ -770,7 +775,7 @@ class PacketProcessor {
         }
     }
 
-    #reportBossHpThreshold(enemyUid: string, currentHp: number) {
+    #reportBossHpThreshold(enemyUid: number, currentHp: number) {
         try {
             // Check if BPTimer submission is enabled
             if (this.userDataManager.globalSettings?.enableBPTimerSubmission === false) {
@@ -790,6 +795,9 @@ class PacketProcessor {
             }
 
             if (currentHp === 0 || currentHp <= maxHp * 0.001) {
+                if (!this.userDataManager.enemyCache.isDead.get(enemyUid)) {
+                    this.userDataManager.enemyCache.deathTime.set(enemyUid, Date.now());
+                }
                 this.userDataManager.enemyCache.isDead.set(enemyUid, true);
                 return;
             }

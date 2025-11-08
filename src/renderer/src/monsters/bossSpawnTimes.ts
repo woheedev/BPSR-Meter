@@ -1,7 +1,7 @@
 export enum SpawnType {
-    ON_THE_HOUR = 'ON_THE_HOUR',           // XX:00
-    HALF_HOUR = 'HALF_HOUR',               // XX:30
-    SPECIFIC_TIMES = 'SPECIFIC_TIMES',     // UTC-2
+    ON_THE_HOUR = "ON_THE_HOUR", // XX:00
+    HALF_HOUR = "HALF_HOUR", // XX:30
+    SPECIFIC_TIMES = "SPECIFIC_TIMES", // UTC-2
 }
 
 export interface BossSpawnConfig {
@@ -13,35 +13,35 @@ export interface BossSpawnConfig {
 export const BOSS_SPAWN_CONFIGS: BossSpawnConfig[] = [
     {
         monsterIds: [
-            '10032',  // Golden Juggernaut
-            '10018',  // Inferno Ogre
-            '10056',  // Brigand Leader
-            '10059',  // Muku Chief
-            '10007',  // Storm Goblin King
-            '10084',  // Celestial Flier
-            '10086',  // Goblin King
+            "10032", // Golden Juggernaut
+            "10018", // Inferno Ogre
+            "10056", // Brigand Leader
+            "10059", // Muku Chief
+            "10007", // Storm Goblin King
+            "10084", // Celestial Flier
+            "10086", // Goblin King
         ],
         spawnType: SpawnType.ON_THE_HOUR,
     },
     {
         monsterIds: [
-            '10009',  // Frost Ogre
-            '10069',  // Phantom Arachnocrab
-            '10077',  // Venobzzar Incubator
-            '10081',  // Iron Fang
-            '10010',  // Tempest Ogre
-            '10085',  // Lizardman King
-            '10029',  // Muku King
+            "10009", // Frost Ogre
+            "10069", // Phantom Arachnocrab
+            "10077", // Venobzzar Incubator
+            "10081", // Iron Fang
+            "10010", // Tempest Ogre
+            "10085", // Lizardman King
+            "10029", // Muku King
         ],
         spawnType: SpawnType.HALF_HOUR,
     },
     {
         monsterIds: [
-            '10902', // Lovely Boarlet
-            '10903', // Breezy Boarlet
+            "10902", // Lovely Boarlet
+            "10903", // Breezy Boarlet
         ],
         spawnType: SpawnType.SPECIFIC_TIMES,
-        specificTimes: ['10:00', '14:00', '18:00'], // UTC-2
+        specificTimes: ["10:00", "14:00", "18:00"], // UTC-2
     },
 ];
 
@@ -50,8 +50,12 @@ export const BOSS_SPAWN_CONFIGS: BossSpawnConfig[] = [
  * @param monsterId The monster ID
  * @returns string
  */
-export function getNextSpawnTime(monsterId: string): { time: string; secondsUntil: number } | null {
-    const config = BOSS_SPAWN_CONFIGS.find(cfg => cfg.monsterIds.includes(monsterId));
+export function getNextSpawnTime(
+    monsterId: string,
+): { time: string; secondsUntil: number } | null {
+    const config = BOSS_SPAWN_CONFIGS.find((cfg) =>
+        cfg.monsterIds.includes(monsterId),
+    );
     if (!config) return null;
 
     const now = new Date();
@@ -64,8 +68,14 @@ export function getNextSpawnTime(monsterId: string): { time: string; secondsUnti
             nextSpawn.setHours(nextSpawn.getHours() + 1);
         }
 
-        const secondsUntil = Math.floor((nextSpawn.getTime() - now.getTime()) / 1000);
-        const timeStr = nextSpawn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const secondsUntil = Math.floor(
+            (nextSpawn.getTime() - now.getTime()) / 1000,
+        );
+        const timeStr = nextSpawn.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
 
         return { time: timeStr, secondsUntil };
     }
@@ -81,8 +91,14 @@ export function getNextSpawnTime(monsterId: string): { time: string; secondsUnti
             nextSpawn.setMinutes(30, 0, 0);
         }
 
-        const secondsUntil = Math.floor((nextSpawn.getTime() - now.getTime()) / 1000);
-        const timeStr = nextSpawn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const secondsUntil = Math.floor(
+            (nextSpawn.getTime() - now.getTime()) / 1000,
+        );
+        const timeStr = nextSpawn.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+        });
 
         return { time: timeStr, secondsUntil };
     }
@@ -95,7 +111,7 @@ export function getNextSpawnTime(monsterId: string): { time: string; secondsUnti
         let nearestSpawn: Date | null = null;
 
         for (const timeStr of config.specificTimes) {
-            const [hours, minutes] = timeStr.split(':').map(Number);
+            const [hours, minutes] = timeStr.split(":").map(Number);
 
             const spawnDate = new Date(now);
             spawnDate.setHours(hours, minutes, 0, 0);
@@ -112,8 +128,14 @@ export function getNextSpawnTime(monsterId: string): { time: string; secondsUnti
         }
 
         if (nearestSpawn) {
-            const secondsUntil = Math.floor((nearestSpawn.getTime() - now.getTime()) / 1000);
-            const timeStr = nearestSpawn.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const secondsUntil = Math.floor(
+                (nearestSpawn.getTime() - now.getTime()) / 1000,
+            );
+            const timeStr = nearestSpawn.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+            });
 
             return { time: timeStr, secondsUntil };
         }
@@ -126,8 +148,8 @@ export function getNextSpawnTime(monsterId: string): { time: string; secondsUnti
  * Format seconds until spawn as a readable string
  */
 export function formatTimeUntilSpawn(secondsUntil: number): string {
-    if (secondsUntil < 0) return 'Spawned';
-    if (secondsUntil === 0) return 'Now!';
+    if (secondsUntil < 0) return "Spawned";
+    if (secondsUntil === 0) return "Now!";
 
     const hours = Math.floor(secondsUntil / 3600);
     const minutes = Math.floor((secondsUntil % 3600) / 60);

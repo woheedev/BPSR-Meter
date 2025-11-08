@@ -1,11 +1,19 @@
-import React, { useEffect, useCallback } from "react";
-import { HistoryHeader, HistoryControls, HistoryList, HistoryDetails, SkillModal } from "./components";
+import React, { useEffect } from "react";
+import {
+    HistoryHeader,
+    HistoryControls,
+    HistoryList,
+    HistoryDetails,
+    SkillModal,
+} from "./components";
 import { useHistoryList, useHistoryDetails, useHistorySettings } from "./hooks";
-import { useWindowControls, useSocket } from "../shared/hooks";
+import { useWindowControls, useSocket } from "@shared/hooks";
 import { usePlayerRegistry } from "../main/hooks/usePlayerRegistry";
-import { useTranslations } from "../shared/hooks/useTranslations";
-import { useWindowResize } from "../shared/hooks/useWindowResize";
-import ResizeHandle from "../shared/components/ResizeHandle";
+import { useTranslations } from "@shared/hooks/useTranslations";
+import { useWindowResize } from "@shared/hooks/useWindowResize";
+import ResizeHandle from "@shared/components/ResizeHandle";
+import { electron } from "@shared/utils/electron";
+import { getItem, setItem } from "@shared/utils/localStorage";
 
 export function HistoryApp(): React.JSX.Element {
     // Hooks
@@ -29,7 +37,12 @@ export function HistoryApp(): React.JSX.Element {
         closeSkillModal,
     } = useHistoryDetails();
 
-    const { isHistorySavingEnabled, saveOnLineSwitch, toggleHistorySaving, toggleSaveOnLineSwitch } = useHistorySettings();
+    const {
+        isHistorySavingEnabled,
+        saveOnLineSwitch,
+        toggleHistorySaving,
+        toggleSaveOnLineSwitch,
+    } = useHistorySettings();
 
     const { getPlayerName, refreshRegistry } = usePlayerRegistry();
 
@@ -37,12 +50,18 @@ export function HistoryApp(): React.JSX.Element {
 
     const socket = useSocket();
 
-    const { scale, zoomIn, zoomOut, handleDragStart, handleClose, isDragging } =
-        useWindowControls({
-            baseWidth: 1125,
-            baseHeight: 875,
-            windowType: "history",
-        });
+    const {
+        zoomIn,
+        zoomOut,
+        handleDragStart,
+        handleClose,
+        isDragging,
+        isLocked,
+    } = useWindowControls({
+        baseWidth: 1125,
+        baseHeight: 875,
+        windowType: "history",
+    });
 
     const { handleResizeStart } = useWindowResize("history");
 
@@ -56,64 +75,52 @@ export function HistoryApp(): React.JSX.Element {
             refreshHistoryList();
         };
 
-        socket.on('historyUpdated', handleHistoryUpdate);
+        socket.on("historyUpdated", handleHistoryUpdate);
 
         return () => {
-            socket.off('historyUpdated', handleHistoryUpdate);
+            socket.off("historyUpdated", handleHistoryUpdate);
         };
     }, [socket, refreshHistoryList]);
 
     useEffect(() => {
-        try {
-            const amount = localStorage.getItem("transparencyAmount") ?? "70";
-            const opacity = parseFloat(amount) / 100;
-            document.documentElement.style.setProperty(
-                "--transparency-amount",
-                opacity.toString(),
-            );
-        } catch (err) {
-            console.warn("Failed to apply transparency amount", err);
+        const amount = getItem("transparencyAmount") ?? "70";
+        const opacity = parseFloat(amount) / 100;
+        document.documentElement.style.setProperty(
+            "--transparency-amount",
+            opacity.toString(),
+        );
+
+        const disableTransparency = getItem("disableTransparency") === "true";
+        document.body.style.backgroundColor = disableTransparency
+            ? "#000"
+            : "transparent";
+
+        const performanceMode = getItem("performanceMode") === "true";
+        if (performanceMode) {
+            document.body.classList.add("performance-mode");
+        } else {
+            document.body.classList.remove("performance-mode");
         }
 
-        try {
-            const disableTransparency = localStorage.getItem("disableTransparency") === "true";
-            document.body.style.backgroundColor = disableTransparency ? "#000" : "transparent";
-
-            const performanceMode = localStorage.getItem("performanceMode") === "true";
-            if (performanceMode) {
-                document.body.classList.add("performance-mode");
-            } else {
-                document.body.classList.remove("performance-mode");
-            }
-        } catch (err) {
-            console.warn("Failed to apply transparency setting", err);
-        }
-
-        try {
-            const unsubscribe = window.electron.onTransparencySettingChanged?.(
-                (isDisabled: boolean) => {
-                    document.body.style.backgroundColor = isDisabled ? "#000" : "transparent";
-                },
-            );
-            return unsubscribe;
-        } catch (err) {
-            console.warn("Failed to setup transparency listener", err);
-        }
+        const unsubscribe = electron.onTransparencySettingChanged(
+            (isDisabled: boolean) => {
+                document.body.style.backgroundColor = isDisabled
+                    ? "#000"
+                    : "transparent";
+            },
+        );
+        return unsubscribe;
     }, []);
 
     useEffect(() => {
-        const unsubscribe = window.electron.onTransparencyAmountChanged?.(
+        const unsubscribe = electron.onTransparencyAmountChanged(
             (amount: number) => {
-                try {
-                    const opacity = amount / 100;
-                    document.documentElement.style.setProperty(
-                        "--transparency-amount",
-                        opacity.toString(),
-                    );
-                    localStorage.setItem("transparencyAmount", amount.toString());
-                } catch (err) {
-                    console.warn("Failed to update transparency amount", err);
-                }
+                const opacity = amount / 100;
+                document.documentElement.style.setProperty(
+                    "--transparency-amount",
+                    opacity.toString(),
+                );
+                setItem("transparencyAmount", amount.toString());
             },
         );
 
@@ -123,21 +130,13 @@ export function HistoryApp(): React.JSX.Element {
     }, []);
 
     useEffect(() => {
-        try {
-            const enabled = localStorage.getItem("clickthroughEnabled") === "true";
-            window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-        } catch (err) {
-            console.warn("Failed to apply clickthrough setting", err);
-        }
+        const enabled = getItem("clickthroughEnabled") === "true";
+        electron.setIgnoreMouseEvents(enabled, { forward: true });
 
-        const unsubscribe = window.electron.onClickthroughChanged?.(
+        const unsubscribe = electron.onClickthroughChanged(
             (enabled: boolean) => {
-                try {
-                    window.electron.setIgnoreMouseEvents?.(enabled, { forward: true });
-                    localStorage.setItem("clickthroughEnabled", enabled.toString());
-                } catch (err) {
-                    console.warn("Failed to update clickthrough setting", err);
-                }
+                electron.setIgnoreMouseEvents(enabled, { forward: true });
+                setItem("clickthroughEnabled", enabled.toString());
             },
         );
 
@@ -151,47 +150,31 @@ export function HistoryApp(): React.JSX.Element {
         return () => clearInterval(interval);
     }, [refreshRegistry]);
 
-    const handleSelectItem = useCallback(
-        async (timestamp: string) => {
-            await loadDetails(timestamp);
-        },
-        [loadDetails],
-    );
+    const handleSelectItem = async (timestamp: string) => {
+        await loadDetails(timestamp);
+    };
 
-    const handleViewSkills = useCallback(
-        async (timestamp: string, uid: string) => {
-            await loadPlayerSkills(timestamp, uid);
-        },
-        [loadPlayerSkills],
-    );
+    const handleViewSkills = async (timestamp: string, uid: string) => {
+        await loadPlayerSkills(timestamp, uid);
+    };
 
-    const handleRefresh = useCallback(async () => {
+    const handleRefresh = async () => {
         await refreshHistoryList();
-    }, [refreshHistoryList]);
+    };
 
-    const handleDeleteItem = useCallback(async (timestamp: string) => {
-        try {
-            if (!window.electron?.deleteHistoryLog) {
-                console.error("deleteHistoryLog API not available");
-                return;
+    const handleDeleteItem = async (timestamp: string) => {
+        const result = await electron.deleteHistoryLog(timestamp);
+
+        if (result.success) {
+            if (selectedTimestamp === timestamp) {
+                loadDetails(null);
             }
 
-            const result = await window.electron.deleteHistoryLog(timestamp);
-
-            if (result.success) {
-                if (selectedTimestamp === timestamp) {
-                    loadDetails(null);
-                }
-
-                await refreshHistoryList();
-            } else {
-                alert(`Failed to delete log: ${result.error || 'Unknown error'}`);
-            }
-        } catch (error) {
-            console.error("Error deleting history log:", error);
-            alert(`Failed to delete log: ${error}`);
+            await refreshHistoryList();
+        } else {
+            alert(`Failed to delete log: ${result.error || "Unknown error"}`);
         }
-    }, [selectedTimestamp, loadDetails, refreshHistoryList]);
+    };
 
     return (
         <div className="history-window">
@@ -202,6 +185,7 @@ export function HistoryApp(): React.JSX.Element {
                 onDragStart={handleDragStart}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
+                isLocked={isLocked}
                 t={t}
             />
 
