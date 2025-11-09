@@ -30,10 +30,11 @@ contextBridge.exposeInMainWorld("electron", {
     openDeviceWindow: () => ipcRenderer.send("open-device-window"),
     openSettingsWindow: () => ipcRenderer.send("open-settings-window"),
     openMonstersWindow: () => ipcRenderer.send("open-monsters-window"),
-    increaseWindowHeight: (windowType: string, step?: number) =>
-        ipcRenderer.send("increase-window-height", windowType, step),
-    decreaseWindowHeight: (windowType: string, step?: number) =>
-        ipcRenderer.send("decrease-window-height", windowType, step),
+    onDataReset: (callback: () => void) => {
+        const listener = () => callback();
+        ipcRenderer.on("reset-data", listener);
+        return () => ipcRenderer.removeListener("reset-data", listener);
+    },
     onWindowShown: (callback: () => void) =>
         ipcRenderer.on("window-shown", () => callback()),
     onWindowFocused: (callback: () => void) => {

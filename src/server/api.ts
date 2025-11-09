@@ -13,7 +13,7 @@ import type {
 } from "../types/index";
 import type { UserDataManager } from "./dataManager";
 import { reloadSkillTranslations } from "./dataManager";
-import { reloadMonsterTranslations } from "../../algo/packet";
+import { reloadMonsterTranslations } from "../../proto/packet";
 import Sniffer from "./sniffer";
 
 // Use user data path in production, current directory in development

@@ -10,7 +10,6 @@ export default defineConfig({
             externalizeDepsPlugin(),
             copy({
                 targets: [
-                    { src: 'algo/blueprotobuf.js', dest: 'out/main/algo' },
                     { src: 'translations/*.json', dest: 'out/main/translations' },
                 ],
                 hook: 'writeBundle'
@@ -20,12 +19,13 @@ export default defineConfig({
             outDir: 'out/main',
             minify: 'esbuild',
             sourcemap: false,
+            target: 'node22',
             rollupOptions: {
                 input: {
                     index: path.resolve(__dirname, 'src/main/index.ts'),
                     server: path.resolve(__dirname, 'src/main/server.ts'),
                 },
-                external: ['electron', 'child_process', 'fs', 'path', 'net', 'url'],
+                external: ['electron', 'child_process', 'fs', 'path', 'net', 'url', 'zlib', 'crypto', 'stream'],
                 output: {
                     manualChunks: undefined
                 }

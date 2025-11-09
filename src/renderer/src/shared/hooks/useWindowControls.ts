@@ -132,9 +132,7 @@ export function useWindowControls(
         });
     }, []);
 
-    const toggleLock = useCallback(() => {
-        electron.toggleLockState();
-    }, []);
+    const toggleLock = () => electron.toggleLockState();
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {

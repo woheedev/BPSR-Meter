@@ -17,6 +17,12 @@ information_log.txt*
 settings.json
 player_registry.json
 
+# Proto
+buf.gen.yaml
+/scripts/sync-proto.js
+/proto-files
+/proto/generated
+
 # Vite cache
 .vite/
 .vite-inspect/

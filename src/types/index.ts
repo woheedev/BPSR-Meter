@@ -82,8 +82,12 @@ export interface GlobalSettings {
     manualGroup?: ManualGroup;
     windowSizes?: {
         main?: { width: number; height: number; scale?: number };
-        group?: { width: number; height: number };
-        history?: { width: number; height: number };
+        group?: { width: number; height: number; scale?: number };
+        history?: { width: number; height: number; scale?: number };
+        device?: { width: number; height: number; scale?: number };
+        settings?: { width: number; height: number; scale?: number };
+        monsters?: { width: number; height: number; scale?: number };
+        update?: { width: number; height: number; scale?: number };
     };
     selectedDevice?: number | string | null;
     captureBackend?: "npcap" | "windivert";
@@ -101,6 +105,8 @@ export interface GlobalSettings {
     settingsKeybind?: string;
     deviceKeybind?: string;
     historyKeybind?: string;
+    dataResetKeybind?: string;
+    clickthroughEnabled?: boolean;
 }
 
 export interface ApiResponse<T = any> {

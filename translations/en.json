@@ -149,6 +149,7 @@
                 "settingsKeybind": "Settings Window Keybind",
                 "deviceKeybind": "Device Window Keybind",
                 "historyKeybind": "History Window Keybind",
+                "dataResetKeybind": "Data Reset Keybind",
                 "clickthrough": "Always Clickthrough",
                 "enableManualHeight": "Enable manual height adjustment",
                 "heightAdjustmentStep": "Height adjustment step (px):",

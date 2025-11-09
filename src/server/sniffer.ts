@@ -1,12 +1,12 @@
 import cap from "cap";
 import { Readable } from "stream";
-import findDefaultNetworkDevice from "../../algo/netInterfaceUtil";
+import findDefaultNetworkDevice from "../../proto/netInterfaceUtil";
 import WindivertAdapter from "./windivert-adapter";
 import { Lock } from "./dataManager";
 import type { UserDataManager } from "./dataManager";
 import type { Logger } from "../types";
 import type { GlobalSettings } from "../types";
-import type PacketProcessor from "../../algo/packet";
+import type PacketProcessor from "../../proto/packet";
 
 const decoders = cap.decoders;
 const PROTOCOL = decoders.PROTOCOL;

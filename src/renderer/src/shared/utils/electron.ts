@@ -26,6 +26,9 @@ export interface UpdateInfo {
 }
 
 export const electron = {
+    // General
+    onDataReset: (callback: () => void) =>
+        safeElectron("onDataReset", callback),
     // Window controls
     closeWindow: () => safeElectron("closeWindow"),
     toggleLockState: () => safeElectron("toggleLockState"),

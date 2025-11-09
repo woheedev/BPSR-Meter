@@ -64,6 +64,8 @@ export default function SettingsApp(): React.JSX.Element {
         useState<string>("CommandOrControl+D");
     const [historyKeybind, setHistoryKeybind] =
         useState<string>("CommandOrControl+H");
+    const [dataResetKeybind, setDataResetKeybind] =
+        useState<string>("CommandOrControl+R");
     const [isRecordingKeybind, setIsRecordingKeybind] = useState<string | null>(
         null,
     );
@@ -425,6 +427,13 @@ export default function SettingsApp(): React.JSX.Element {
                     storage.setItem("lockKeybind", keybind);
                     electron.updateGlobalSettings({ lockKeybind: keybind });
                     break;
+                case "dataReset":
+                    setDataResetKeybind(keybind);
+                    storage.setItem("dataResetKeybind", keybind);
+                    electron.updateGlobalSettings({
+                        dataResetKeybind: keybind,
+                    });
+                    break;
                 case "monsters":
                     setMonstersKeybind(keybind);
                     storage.setItem("monstersKeybind", keybind);
@@ -694,6 +703,23 @@ export default function SettingsApp(): React.JSX.Element {
                         type="history"
                         isRecording={isRecordingKeybind === "history"}
                         onFocus={() => handleKeybindRecord("history")}
+                        onKeyDown={handleKeybindKeyDown}
+                        onBlur={handleKeybindBlur}
+                        pressKeysPlaceholder={t(
+                            "ui.settings.placeholders.pressKeys",
+                            "Press keys...",
+                        )}
+                    />
+
+                    <KeybindInput
+                        label={t(
+                            "ui.settings.labels.dataResetKeybind",
+                            "Data Reset Keybind",
+                        )}
+                        value={dataResetKeybind}
+                        type="dataReset"
+                        isRecording={isRecordingKeybind === "dataReset"}
+                        onFocus={() => handleKeybindRecord("dataReset")}
                         onKeyDown={handleKeybindKeyDown}
                         onBlur={handleKeybindBlur}
                         pressKeysPlaceholder={t(

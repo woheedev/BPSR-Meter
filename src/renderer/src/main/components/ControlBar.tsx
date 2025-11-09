@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { DragIndicator } from "@/src/shared/components/DragIndicator";
 import { CombatTimer } from "./CombatTimer";
 import type { ViewMode, SortColumn } from "@shared/types";
@@ -94,6 +94,8 @@ export function ControlBar({
     const hasDamage =
         relevantPlayers.length > 0 &&
         relevantPlayers.some((p) => p.total_damage && p.total_damage.total > 0);
+
+    useEffect(() => electron.onDataReset(() => onSync()), []);
 
     return (
         <div className="controls gap-3">

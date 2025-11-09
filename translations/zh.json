@@ -149,6 +149,7 @@
                 "settingsKeybind": "设置窗口快捷键",
                 "deviceKeybind": "设备窗口快捷键",
                 "historyKeybind": "历史窗口快捷键",
+                "dataResetKeybind": "数据重置快捷键",
                 "clickthrough": "始终穿透模式",
                 "enableManualHeight": "启用手动高度调整",
                 "heightAdjustmentStep": "高度调整步长（像素）：",

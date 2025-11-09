@@ -11,10 +11,10 @@ import {
     UserDataManager,
     reloadSkillTranslations,
 } from "../../src/server/dataManager";
-import { reloadMonsterTranslations } from "../../algo/packet";
+import { reloadMonsterTranslations } from "../../proto/packet";
 import Sniffer from "../../src/server/sniffer";
 import initializeApi from "../../src/server/api";
-import PacketProcessor from "../../algo/packet";
+import PacketProcessor from "../../proto/packet";
 
 const SETTINGS_PATH = path.join(process.env.USER_DATA_PATH, "settings.json");
 const PLAYER_REGISTRY_PATH = path.join(
