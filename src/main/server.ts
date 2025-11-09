@@ -6,7 +6,8 @@ import express from "express";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import zlib from "zlib";
-import type { GlobalSettings, PlayerRegistry } from "../../src/types/index";
+import { globalSettings } from "./constants";
+import type { PlayerRegistry } from "../../src/types/index";
 import {
     UserDataManager,
     reloadSkillTranslations,
@@ -21,38 +22,6 @@ const PLAYER_REGISTRY_PATH = path.join(
     process.env.USER_DATA_PATH,
     "player_registry.json",
 );
-
-const globalSettings: GlobalSettings = {
-    availableLanguages: ["en", "zh"],
-    language: "en",
-    selectedPlayers: [],
-    filterMode: "all",
-    isPaused: false,
-    autoClearOnServerChange: true,
-    autoClearOnTimeout: false,
-    autoClearTimeoutSeconds: 20,
-    onlyRecordEliteDummy: false,
-    enableFightLog: false,
-    enableHistorySave: false,
-    enableBPTimerSubmission: true,
-    performanceMode: false,
-    updateIntervalMs: 100,
-    disableTransparency: false,
-    transparencyAmount: 70,
-    lockPosition: false,
-    lockKeybind: "CommandOrControl+L",
-    monstersKeybind: "CommandOrControl+M",
-    groupKeybind: "CommandOrControl+G",
-    settingsKeybind: "CommandOrControl+S",
-    deviceKeybind: "CommandOrControl+D",
-    historyKeybind: "CommandOrControl+H",
-    lastPausedAt: null,
-    lastResumedAt: null,
-    manualGroup: {
-        enabled: false,
-        members: [],
-    },
-};
 
 const playerRegistry: PlayerRegistry = {};
 
