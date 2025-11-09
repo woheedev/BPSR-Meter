@@ -181,8 +181,8 @@ export class WindowManager {
     ): Promise<void> {
         this.lastWindowSizes[windowType] = {
             ...this.lastWindowSizes[windowType],
-            width,
-            height,
+            ...(width !== undefined && { width }),
+            ...(height !== undefined && { height }),
             ...(scale !== undefined && { scale }),
         };
         await this.#settingsManager.saveWindowSize(
