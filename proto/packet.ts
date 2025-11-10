@@ -677,6 +677,7 @@ class PacketProcessor {
 
             const monsterId = this.userDataManager.enemyCache.monsterId.get(enemyUuid);
             const maxHp = this.userDataManager.enemyCache.maxHp.get(enemyUuid);
+            const position = this.userDataManager.enemyCache.position.get(enemyUuid);
 
             if (!monsterId || !maxHp || maxHp === 0) {
                 return;
@@ -691,11 +692,20 @@ class PacketProcessor {
             }
 
             const hpPercentage = (currentHp / maxHp) * 100;
-
+            const pos_x = position?.x;
+            const pos_y = position?.y;
+            const pos_z = position?.z;
             const line = this.userDataManager.getCurrentLineId();
 
             this.bpTimerClient
-                .reportHP(monsterId, hpPercentage, line)
+                .reportHP({
+                    monster_id: monsterId,
+                    hp_pct: hpPercentage,
+                    line: line,
+                    pos_x: pos_x,
+                    pos_y: pos_y,
+                    pos_z: pos_z,
+                })
                 .catch((err) => {
                     this.logger.debug(
                         `[BPTimer] Failed to report HP threshold: ${err.message}`,
@@ -727,6 +737,7 @@ class PacketProcessor {
             if (attrCollection && attrCollection.Attrs) {
                 switch (entity.entType) {
                     case EEntityType.EntMonster:
+                        this.#processPositionAttrs(entityUuidStr, 'monster', attrCollection.Attrs);
                         this.#processEnemyAttrs(entityUuidStr, entityUid, attrCollection.Attrs);
                         break;
                     case EEntityType.EntChar:
